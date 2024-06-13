@@ -1,0 +1,4 @@
+role_id,role_name,description
+1,admin,Administrator
+2,student,Student
+3,teacher,Teacher
