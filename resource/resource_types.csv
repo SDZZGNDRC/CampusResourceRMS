@@ -1,13 +1,10 @@
 type_id,type_name,description
-1,classroom,Classroom
-2,lab,Lab
-3,office,Office
-4,discussion_room,Discussion Room
-5,computer_lab,Computer Lab
-6,lecture_hall,Lecture Hall
-7,auditorium,Auditorium
-8,conference_room,Conference Room
-9,gymnasium,Gymnasium
-
-
-
+0,classroom,Classroom
+1,lab,Lab
+2,office,Office
+3,discussion_room,Discussion Room
+4,computer_lab,Computer Lab
+5,lecture_hall,Lecture Hall
+6,auditorium,Auditorium
+7,conference_room,Conference Room
+8,gymnasium,Gymnasium

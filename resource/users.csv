@@ -1,0 +1,4 @@
+user_id,username,password,email,role_id,student_id,teacher_id
+0,student1,123456,student1@gmail.com,1,0,0
+1,teacher1,123456,teacher1@gmail.com,2,0,0
+2,admin,123456,admin@gmail.com,0,0,0

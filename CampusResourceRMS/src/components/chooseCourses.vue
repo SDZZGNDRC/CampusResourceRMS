@@ -21,11 +21,12 @@
         </v-card>
       </v-col>
     </v-row>
-    <v-row no-gutters class="height-100 justify-center"
-      v-for="{id, time} in courses"
+    <v-row no-gutters class="justify-center"
+      v-for="{id, name, time} in courses"
       :key="id"
       cols="12"
     >
+      <!-- 显示时间 -->
       <v-col cols="2" class="py-1 px-1">
         <v-card
           class="mx-auto text-center"
@@ -33,6 +34,7 @@
           dark
           variant="outlined"
         >
+        {{ name }}
         {{ time }}
         </v-card>
       </v-col>
@@ -108,12 +110,16 @@ export default {
   methods: {
     dialogSave(id) {
       this.selected[id] = !this.selected[id];
+      this.emitSelected();
       this.selectedIndex = -1;
       this.dialog = false;
     },
     dialogCancel() {
       this.selectedIndex = -1;
       this.dialog = false;
+    },
+    emitSelected() {
+      this.$emit('update:selected', this.selected);
     },
   },
 

@@ -1,12 +1,12 @@
 CREATE TABLE `Role` (
-  `role_id` int NOT NULL AUTO_INCREMENT,
+  `role_id` int NOT NULL,
   `role_name` varchar(255) NOT NULL,
   `description` varchar(255),
   PRIMARY KEY (`role_id`)
 );
 
 CREATE TABLE `User` (
-  `user_id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
   `username` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
@@ -18,14 +18,14 @@ CREATE TABLE `User` (
 );
 
 CREATE TABLE `ResourceType` (
-  `type_id` int NOT NULL AUTO_INCREMENT,
+  `type_id` int NOT NULL,
   `type_name` varchar(255) NOT NULL,
   `description` varchar(255),
   PRIMARY KEY (`type_id`)
 );
 
 CREATE TABLE `Resource` (
-  `resource_id` int NOT NULL AUTO_INCREMENT,
+  `resource_id` int NOT NULL,
   `name` varchar(255) NOT NULL,
   `description` varchar(255),
   `location` varchar(255),
@@ -37,7 +37,7 @@ CREATE TABLE `Resource` (
 );
 
 CREATE TABLE `Reservation` (
-  `reservation_id` int NOT NULL AUTO_INCREMENT,
+  `reservation_id` int NOT NULL,
   `start_time` datetime NOT NULL,
   `end_time` datetime NOT NULL,
   `resource_id` int NOT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE `Reservation` (
 );
 
 CREATE TABLE `UsageRecord` (
-  `record_id` int NOT NULL AUTO_INCREMENT,
+  `record_id` int NOT NULL,
   `user_id` int NOT NULL,
   `reservation_id` int NOT NULL,
   PRIMARY KEY (`record_id`),

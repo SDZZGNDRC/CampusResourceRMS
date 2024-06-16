@@ -6,7 +6,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
-      path: '/',
+      path: '/login',
       component: () => import('@/components/Login.vue')
     },
     {
@@ -20,6 +20,22 @@ const router = createRouter({
     {
       path: '/userdashboard',
       component: () => import('@/components/UserDashboard.vue')
+    },
+    {
+      path: '/search',
+      component: () => import('@/components/search.vue')
+    },
+    {
+      path: '/auto-schedule-course',
+      component: () => import('@/components/AutoScheduleCourse.vue')
+    },
+    {
+      path: '/test',
+      component: () => import('@/components/test.vue')
+    },
+    {
+      path: '/my-records',
+      component: () => import('@/components/MyRecords.vue')
     }
     // 可以根据您的需要添加更多路由
   ]

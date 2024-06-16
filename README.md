@@ -37,6 +37,7 @@ This system aims to provide a unified reservation management platform for variou
 3. endTime
 4. resourceID (Foreign Key)
 5. status
+6. description (nullable)
 
 ### Role
 

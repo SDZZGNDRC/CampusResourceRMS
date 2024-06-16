@@ -9,7 +9,7 @@
             <v-card-text>
               <v-form ref="form" v-model="valid" @submit.prevent="submit">
                 <v-text-field
-                  v-model="email"
+                  v-model="username"
                   :rules="idRules"
                   label="学号/教师编号"
                   required
@@ -36,33 +36,49 @@
   </template>
   
   <script>
+  import axios from 'axios';
+
   export default {
     data: () => ({
+      isLogin: false,
       valid: true,
-      email: '',
+      username: '',
       password: '',
       idRules: [
         v => !!v || '学号/教师编号是必填项',
-        v => /^\d+$/.test(v) || '学号/教师编号必须有效',
       ],
       passwordRules: [
         v => !!v || '密码是必填项',
-        v => (v && v.length >= 8) || '密码必须包含8个以上的字符',
+        v => (v && v.length >= 6) || '密码必须包含6个以上的字符',
       ],
     }),
     methods: {
+      emitIsLogin() {
+        this.$emit('update:isLogin', this.isLogin);
+      },
       submit() {
         if (this.$refs.form.validate()) {
-          // 检查密码是否包含英文字母
-          const containsLetter = /[a-zA-Z]/.test(this.password);
+          const formData = new FormData();
+          formData.append('username', this.username);
+          formData.append('password', this.password);
 
-          if (containsLetter) {
-            // 密码包含英文字母，跳转到 Home 页面
-            this.$router.push('/userdashboard');
-          } else {
-            // 密码不包含英文字母，跳转到 About 页面
-            this.$router.push('/about');
-          }
+          axios.post('http://127.0.0.1:5000/login', formData)
+            .then(response => {
+              // 根据后端返回的结果进行跳转或显示错误信息
+              if (response.data.status === 'success') {
+                this.isLogin = true;
+                this.emitIsLogin();
+                this.$router.push('/search');
+              } else {
+                this.username = '';
+                this.password = '';
+                // 在登录框显示错误
+              }
+            })
+            .catch(error => {
+              console.error(error);
+              // 处理错误
+            });
         }
       },
     },

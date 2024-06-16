@@ -1,32 +1,31 @@
 <!-- App.vue -->
 <template>
   <v-app>
-    <v-tabs centered bg-color="primary">
-      <v-tab to="/home">Home</v-tab>
-      <v-tab to="/about">About</v-tab>
+    <v-tabs centered bg-color="primary" v-if="isLogin">
+      <v-tab to="/test">Test</v-tab>
       <v-tab to="/userdashboard">User Dashboard</v-tab>
+      <v-tab to="/search">预约资源</v-tab>
+      <v-tab to="/my-records">我的记录</v-tab>
+      <v-tab to="/auto-schedule-course">自动排课</v-tab>
     </v-tabs>
-    <!-- 在此处添加一个选项卡（tabs），当对应的tab被点击时，router-view自动渲染对应的组件。 -->
-    <v-main class="d-flex align-center justify-center">
-      <router-view></router-view>
-    </v-main>
+    <v-container v-if="!isLogin">
+      <Login @update:isLogin="updateIsLogin" />
+    </v-container>
+    <router-view v-if="isLogin"></router-view>
   </v-app>
 </template>
 
 <script setup>
-  //
+import { ref } from 'vue';
+import Login from './components/Login.vue';
+const isLogin = ref(false);
+
+const updateIsLogin = (value) => {
+  isLogin.value = value;
+  console.log(isLogin.value);
+};
 </script>
 
 <style scoped>
-.align-center {
-  align-items: center;
-}
-
-.justify-center {
-  justify-content: center;
-}
-
-.d-flex {
-  display: flex;
-}
+/* 样式 */
 </style>
