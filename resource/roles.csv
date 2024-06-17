@@ -1,4 +1,6 @@
 role_id,role_name,description
-0,admin,Administrator
-1,student,Student
-2,teacher,Teacher
+0,管理员,Administrator
+1,学生,Student
+2,教师,Teacher
+3,班委,Monitor
+4,社团管理员,Association

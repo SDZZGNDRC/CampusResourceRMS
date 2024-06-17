@@ -20,4 +20,10 @@ resource_id,name,description,location,capacity,status,type_id
 19,G101,3层,G楼,60,available,0
 20,H501,5层,H楼,150,available,6
 21,N201,2层,N楼,150,available,5
-22,研究院二楼公共机房,研究院二楼,研究院,200,available,4
+22,研究院二楼公共机房,研究院2楼,研究院,200,available,4
+23,研究院406,研究院4楼,研究院,150,available,4
+24,研究院407,研究院4楼,研究院,150,available,4
+25,研究院408,研究院4楼,研究院,150,available,4
+26,研究院409,研究院4楼,研究院,150,available,4
+27,研究院507,配备计算机体系结构课程试验箱,研究院,150,available,1
+28,研究院508,配备数字电路实验平台,研究院,150,available,1

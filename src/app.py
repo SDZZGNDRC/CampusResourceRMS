@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request
+from datetime import datetime
 from flask_cors import CORS
 import mysql.connector
 app = Flask(__name__)
@@ -89,6 +90,11 @@ def search():
     location = request.args.get('location')
     capacity = request.args.get('capacity')
     type_name = request.args.get('type')
+    start_date: str = request.args.get('start_date') # str; maybe null or empty; ISO 8601 格式
+    end_date: str = request.args.get('end_date') # str; maybe null or empty; ISO 8601 格式
+    
+    print(type(start_date), start_date)
+    print(type(end_date), end_date)
 
     cursor = conn.cursor()
 
@@ -113,6 +119,20 @@ def search():
         filters.append("r.capacity >= %s")
         params.append(capacity)
 
+    # 如果`start_date`和`end_date`不为空，则添加时间范围条件: 在`reservation`表中查询`start_date`和`end_date`之间的记录并过滤掉
+    if start_date and end_date:
+        start_datetime = datetime.fromisoformat(start_date)
+        end_datetime = datetime.fromisoformat(end_date)
+        filters.append("""
+            r.resource_id NOT IN (
+                SELECT resource_id
+                FROM reservation
+                WHERE (start_time <= %s AND end_time >= %s)
+                OR (start_time <= %s AND end_time >= %s)
+            )
+        """)
+        params.extend([end_datetime, start_datetime, start_datetime, end_datetime])
+    
     if filters:
         query += " WHERE " + " AND ".join(filters)
 

@@ -113,12 +113,23 @@
 </template>
 
 <script>
-import { ref } from 'vue';
+import { ref, watchEffect } from 'vue';
 import axios from 'axios';
 export default {
   setup() {
     const start_date = ref(new Date())
     const end_date = ref(new Date())
+
+    watchEffect(() => {
+      fetchResults(search.value, type.value, capacity.value, location.value, start_date.value, end_date.value)
+        .then((data) => {
+          results.value = data;
+        })
+        .catch((error) => {
+          console.error('搜索失败', error);
+        });
+    });
+
     return {
       start_date,
       end_date,
@@ -157,16 +168,16 @@ export default {
   },
   watch: {
     async search(val) {
-      this.results = await this.fetchResults(val, this.type, this.capacity, this.location)
+      this.results = await this.fetchResults(val, this.type, this.capacity, this.location, this.start_date, this.end_date)
     },
     async type(val) {
-      this.results = await this.fetchResults(this.search, val, this.capacity, this.location)
+      this.results = await this.fetchResults(this.search, val, this.capacity, this.location, this.start_date, this.end_date)
     },
     async capacity(val) {
-      this.results = await this.fetchResults(this.search, this.type, val, this.location)
+      this.results = await this.fetchResults(this.search, this.type, val, this.location, this.start_date, this.end_date)
     },
     async location(val) {
-      this.results = await this.fetchResults(this.search, this.type, this.capacity, val)
+      this.results = await this.fetchResults(this.search, this.type, this.capacity, val, this.start_date, this.end_date)
     },
     reserveDialog(val) {
       val || this.close()
@@ -189,20 +200,22 @@ export default {
             const locationsResponse = await axios.get('http://127.0.0.1:5000/get-all-locations');
             this.locations = locationsResponse.data.locations;
 
-            this.results = await this.fetchResults('', null, null, null);
+            this.results = await this.fetchResults('', null, null, null, this.start_date, this.end_date);
         } catch (error) {
             console.error('初始化失败', error);
         }
     },
 
-    async fetchResults(search, type, capacity, location) {
+    async fetchResults(search, type, capacity, location, start_date, end_date) {
       try {
         const response = await axios.get('http://127.0.0.1:5000/search', {
           params: {
             name: search,
             type: type,
             capacity: capacity,
-            location: location
+            location: location,
+            start_date: start_date,
+            end_date: end_date,
           }
         });
 
