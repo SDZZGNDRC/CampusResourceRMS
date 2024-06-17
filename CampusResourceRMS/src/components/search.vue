@@ -36,30 +36,30 @@
         ></v-select>
       </v-col>
     </v-row>
-      <v-row>
-        <v-col cols="6">
-          <v-row align="center">
-            <v-spacer></v-spacer>
-            <v-col cols="3">
-              <span class="mr-1">开始时间:</span>
-            </v-col>
-            <v-col cols="8">
-              <VueDatePicker v-model="start_date" />
-            </v-col>
-          </v-row>
-        </v-col>
-        <v-col cols="6">
-          <v-row align="center">
-            <v-spacer></v-spacer>
-            <v-col cols="3">
-              <span class="mr-1">结束时间:</span>
-            </v-col>
-            <v-col cols="8">
-              <VueDatePicker v-model="end_date" />
-            </v-col>
-          </v-row>
-        </v-col>
-      </v-row>
+    <v-row>
+      <v-col cols="6">
+        <v-row align="center">
+          <v-spacer></v-spacer>
+          <v-col cols="3">
+            <span class="mr-1">开始时间:</span>
+          </v-col>
+          <v-col cols="8">
+            <VueDatePicker v-model="start_date" />
+          </v-col>
+        </v-row>
+      </v-col>
+      <v-col cols="6">
+        <v-row align="center">
+          <v-spacer></v-spacer>
+          <v-col cols="3">
+            <span class="mr-1">结束时间:</span>
+          </v-col>
+          <v-col cols="8">
+            <VueDatePicker v-model="end_date" />
+          </v-col>
+        </v-row>
+      </v-col>
+    </v-row>
     <v-row>
       <v-col cols="12">
         <v-data-table :headers="headers" :items="results">
@@ -113,140 +113,120 @@
 </template>
 
 <script>
-import { ref, watchEffect } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import axios from 'axios';
+
 export default {
   setup() {
-    const start_date = ref(new Date())
-    const end_date = ref(new Date())
-
-    watchEffect(() => {
-      fetchResults(search.value, type.value, capacity.value, location.value, start_date.value, end_date.value)
-        .then((data) => {
-          results.value = data;
-        })
-        .catch((error) => {
-          console.error('搜索失败', error);
-        });
+    const search = ref('');
+    const type = ref('');
+    const capacity = ref(0);
+    const location = ref('');
+    const types = ref([]);
+    const capacities = ref([]);
+    const locations = ref([]);
+    const results = ref([]);
+    const start_date = ref(new Date());
+    const end_date = ref(new Date());
+    const reserveDialog = ref(false);
+    const reservedIndex = ref(-1);
+    const reservedItem = ref({
+      title: '',
+      description: ''
     });
-
-    return {
-      start_date,
-      end_date,
+    const defaultItem = {
+      title: '',
+      description: ''
     };
-  },
-  data() {
-    return {
-      reserveDialog: false,
-      reservedIndex: -1,
-      reservedItem: {
-        title: '',
-        description: '',
-      },
-      defaultItem: {
-        title: '',
-        description: '',
-      },
-      search: '',
-      type: null,
-      capacity: null,
-      location: null,
-      types: [],
-      capacities: [],
-      locations: [],
-      results: [],
-      headers: [
-        { title: '资源ID', align: 'start', key: 'resource_id' },
-        { title: '名称', key: 'name' },
-        { title: '描述', key: 'description' },
-        { title: '位置', key: 'location' },
-        { title: '容量', key: 'capacity' },
-        { title: '类型', key: 'type_name' },
-        { title: '操作', key: 'actions', sortable: false },
-      ],
-    }
-  },
-  watch: {
-    async search(val) {
-      this.results = await this.fetchResults(val, this.type, this.capacity, this.location, this.start_date, this.end_date)
-    },
-    async type(val) {
-      this.results = await this.fetchResults(this.search, val, this.capacity, this.location, this.start_date, this.end_date)
-    },
-    async capacity(val) {
-      this.results = await this.fetchResults(this.search, this.type, val, this.location, this.start_date, this.end_date)
-    },
-    async location(val) {
-      this.results = await this.fetchResults(this.search, this.type, this.capacity, val, this.start_date, this.end_date)
-    },
-    reserveDialog(val) {
-      val || this.close()
-    }
-  },
 
-  created() {
-    this.initialize()
-  },
+    const headers = [
+      { title: '资源ID', align: 'start', key: 'resource_id' },
+      { title: '名称', key: 'name' },
+      { title: '描述', key: 'description' },
+      { title: '位置', key: 'location' },
+      { title: '容量', key: 'capacity' },
+      { title: '类型', key: 'type_name' },
+      { title: '操作', key: 'actions', sortable: false },
+    ];
 
-  methods: {
-    async initialize() {
-        try {
-            const typesResponse = await axios.get('http://127.0.0.1:5000/get-all-resource-types');
-            this.types = typesResponse.data.resource_types;
-
-            const capacitiesResponse = await axios.get('http://127.0.0.1:5000/get-all-resources-capacities');
-            this.capacities = capacitiesResponse.data.caps;
-
-            const locationsResponse = await axios.get('http://127.0.0.1:5000/get-all-locations');
-            this.locations = locationsResponse.data.locations;
-
-            this.results = await this.fetchResults('', null, null, null, this.start_date, this.end_date);
-        } catch (error) {
-            console.error('初始化失败', error);
-        }
-    },
-
-    async fetchResults(search, type, capacity, location, start_date, end_date) {
+    const fetchResults = async () => {
       try {
         const response = await axios.get('http://127.0.0.1:5000/search', {
           params: {
-            name: search,
-            type: type,
-            capacity: capacity,
-            location: location,
-            start_date: start_date,
-            end_date: end_date,
+            name: search.value,
+            type: type.value,
+            capacity: capacity.value,
+            location: location.value,
+            start_date: start_date.value,
+            end_date: end_date.value,
           }
         });
 
-        return response.data.resources;
+        results.value = response.data.resources;
       } catch (error) {
         console.error('搜索失败', error);
       }
-      return [];
-    },
+    };
 
-    reserveItem(item) {
-      this.reservedIndex = this.results.indexOf(item)
-      this.reservedItem = Object.assign({}, item)
-      this.reserveDialog = true
-    },
+    watch([search, type, capacity, location, start_date, end_date], fetchResults, { immediate: true });
 
-    close() {
-      this.reserveDialog = false
-      this.$nextTick(() => {
-        this.reservedItem = Object.assign({}, this.defaultItem)
-        this.reservedIndex = -1
-      })
-    },
+    const reserveItem = (item) => {
+      reservedIndex.value = results.value.indexOf(item);
+      reservedItem.value = { ...item };
+      reserveDialog.value = true;
+    };
 
-    reserve() {
-      if (this.reservedIndex > -1) {
-        Object.assign(this.results[this.reservedIndex], this.reservedItem)
+    const close = () => {
+      reserveDialog.value = false;
+      reservedItem.value = { ...defaultItem };
+      reservedIndex.value = -1;
+    };
+
+    const reserve = () => {
+      if (reservedIndex.value > -1) {
+        results.value[reservedIndex.value] = { ...reservedItem.value };
       }
-      this.close()
-    }
+      close();
+    };
 
+    const initialize = async () => {
+      try {
+        const typesResponse = await axios.get('http://127.0.0.1:5000/get-all-resource-types');
+        types.value = typesResponse.data.resource_types;
+
+        const capacitiesResponse = await axios.get('http://127.0.0.1:5000/get-all-resources-capacities');
+        capacities.value = capacitiesResponse.data.caps;
+
+        const locationsResponse = await axios.get('http://127.0.0.1:5000/get-all-locations');
+        locations.value = locationsResponse.data.locations;
+
+        await fetchResults();
+      } catch (error) {
+        console.error('初始化失败', error);
+      }
+    };
+
+    onMounted(initialize);
+
+    return {
+      search,
+      type,
+      capacity,
+      location,
+      types,
+      capacities,
+      locations,
+      results,
+      headers,
+      start_date,
+      end_date,
+      reserveDialog,
+      reservedIndex,
+      reservedItem,
+      reserveItem,
+      close,
+      reserve
+    };
   }
-}
+};
 </script>
