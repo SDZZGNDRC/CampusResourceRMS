@@ -21,9 +21,9 @@
       </v-col>
       <v-col cols="2" sm="2" md="2">
         <v-select
-          :items="statuses"
+          :items="capacities"
           label="最大容量"
-          v-model="status"
+          v-model="capacity"
           clearable
         ></v-select>
       </v-col>
@@ -114,7 +114,7 @@
 
 <script>
 import { ref } from 'vue';
-
+import axios from 'axios';
 export default {
   setup() {
     const start_date = ref(new Date())
@@ -138,31 +138,35 @@ export default {
       },
       search: '',
       type: null,
-      status: null,
+      capacity: null,
       location: null,
-      types: ['类型1', '类型2', '类型3'],
-      statuses: ['状态1', '状态2', '状态3'],
-      locations: ['位置1', '位置2', '位置3'],
-      results: [ { title: '搜索结果1', description: '描述1' }, { title: '搜索结果2', description: '描述2' } ], // 添加一个新的数据属性来存储搜索结果
+      types: [],
+      capacities: [],
+      locations: [],
+      results: [],
       headers: [
-        { title: '标题', align: 'start', key: 'title' },
+        { title: '资源ID', align: 'start', key: 'resource_id' },
+        { title: '名称', key: 'name' },
         { title: '描述', key: 'description' },
+        { title: '位置', key: 'location' },
+        { title: '容量', key: 'capacity' },
+        { title: '类型', key: 'type_name' },
         { title: '操作', key: 'actions', sortable: false },
       ],
     }
   },
   watch: {
-    search(val) {
-      this.results = this.fetchResults(val, this.type, this.status, this.location)
+    async search(val) {
+      this.results = await this.fetchResults(val, this.type, this.capacity, this.location)
     },
-    type(val) {
-      this.results = this.fetchResults(this.search, val, this.status, this.location)
+    async type(val) {
+      this.results = await this.fetchResults(this.search, val, this.capacity, this.location)
     },
-    status(val) {
-      this.results = this.fetchResults(this.search, this.type, val, this.location)
+    async capacity(val) {
+      this.results = await this.fetchResults(this.search, this.type, val, this.location)
     },
-    location(val) {
-      this.results = this.fetchResults(this.search, this.type, this.status, val)
+    async location(val) {
+      this.results = await this.fetchResults(this.search, this.type, this.capacity, val)
     },
     reserveDialog(val) {
       val || this.close()
@@ -174,14 +178,38 @@ export default {
   },
 
   methods: {
+    async initialize() {
+        try {
+            const typesResponse = await axios.get('http://127.0.0.1:5000/get-all-resource-types');
+            this.types = typesResponse.data.resource_types;
 
-    initialize() {
-      // this.fetchResults('', null, null, null)
+            const capacitiesResponse = await axios.get('http://127.0.0.1:5000/get-all-resources-capacities');
+            this.capacities = capacitiesResponse.data.caps;
+
+            const locationsResponse = await axios.get('http://127.0.0.1:5000/get-all-locations');
+            this.locations = locationsResponse.data.locations;
+
+            this.results = await this.fetchResults('', null, null, null);
+        } catch (error) {
+            console.error('初始化失败', error);
+        }
     },
 
-    fetchResults(search, type, status, location) {
-      // 在这里执行你的搜索操作并返回结果
-      // 这只是一个示例，你需要根据你的实际需求来实现这个函数
+    async fetchResults(search, type, capacity, location) {
+      try {
+        const response = await axios.get('http://127.0.0.1:5000/search', {
+          params: {
+            name: search,
+            type: type,
+            capacity: capacity,
+            location: location
+          }
+        });
+
+        return response.data.resources;
+      } catch (error) {
+        console.error('搜索失败', error);
+      }
       return [];
     },
 

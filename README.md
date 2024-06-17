@@ -29,6 +29,7 @@ This system aims to provide a unified reservation management platform for variou
 5. location (nullable)
 6. capacity
 7. status
+8. responsibleID (Foreign Key) (nullable)
 
 ### Reservation
 

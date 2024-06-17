@@ -72,11 +72,11 @@ def get_all_resource_types():
     }
     return jsonify(response)
 
-@app.route("/get-all-resources-capacity", methods=['GET'])
+@app.route("/get-all-resources-capacities", methods=['GET'])
 def get_all_res_caps():
     cursor = conn.cursor()
     cursor.execute("SELECT DISTINCT capacity FROM resource")
-    caps = [row[0] for row in cursor.fetchall()]
+    caps = sorted([row[0] for row in cursor.fetchall()])
     response = {
         "status": "success",
         "caps": caps
@@ -95,11 +95,29 @@ def search():
     # 构建查询语句
     query = "SELECT r.resource_id, r.name, r.description, r.location, r.capacity, r.status, rt.type_name " \
             "FROM resource r " \
-            "JOIN resourcetype rt ON r.type_id = rt.type_id " \
-            "WHERE r.name LIKE %s AND r.location = %s AND r.capacity = %s AND rt.type_name = %s"
+            "JOIN resourcetype rt ON r.type_id = rt.type_id"
+    
+    filters = []
+    params = []
+    if name:
+        filters.append("r.name LIKE %s")
+        params.append('%' + name + '%')
+    if location:
+        filters.append("r.location = %s")
+        params.append(location)
+    if type_name:
+        filters.append("rt.type_name = %s")
+        params.append(type_name)
+
+    if capacity:
+        filters.append("r.capacity >= %s")
+        params.append(capacity)
+
+    if filters:
+        query += " WHERE " + " AND ".join(filters)
 
     # 执行查询
-    cursor.execute(query, ('%' + name + '%', location, capacity, type_name))
+    cursor.execute(query, params)
     resources = cursor.fetchall()
 
     # 构建返回的 JSON 数据
@@ -121,4 +139,6 @@ def search():
         response["resources"].append(resource_data)
 
     return jsonify(response)
+
+
 

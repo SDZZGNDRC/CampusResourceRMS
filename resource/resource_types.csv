@@ -1,10 +1,11 @@
 type_id,type_name,description
-0,classroom,Classroom
-1,lab,Lab
-2,office,Office
-3,discussion_room,Discussion Room
-4,computer_lab,Computer Lab
-5,lecture_hall,Lecture Hall
-6,auditorium,Auditorium
-7,conference_room,Conference Room
-8,gymnasium,Gymnasium
+0,教室,用于学生上课和学习的场所，配备黑板、桌椅等教学设施。
+1,实验室,用于进行科学实验和研究的场所，配备实验台、仪器设备等。
+2,办公室,用于工作和办公的场所，配备办公桌、文件柜等办公设施。
+3,讨论室,用于小组讨论和会议的场所，配备圆桌、投影仪等讨论设施。
+4,机房,用于存放和维护计算机设备的场所，配备服务器、网络设备等。
+5,报告厅,用于举办演讲和报告的场所，配备讲台、座位等。
+6,礼堂,用于举办各种文艺演出和庆典活动的场所，配备舞台、灯光音响设备等。
+7,会议室,用于举办各类会议和商务活动的场所，配备会议桌、投影设备等。
+8,健身房,用于进行健身锻炼和运动训练的场所，配备健身器材、瑜伽垫等。
+9,运动场,用于举办体育比赛和进行各类体育活动的场所，配备跑道、球场等运动设施。
