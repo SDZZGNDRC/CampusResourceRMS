@@ -160,5 +160,114 @@ def search():
 
     return jsonify(response)
 
+@app.route("/reserve", methods=['POST'])
+def reserve():
+    # 获取POST请求的JSON数据
+    data = request.json
+    resource_id = data.get('resource_id')
+    start_time = data.get('start_time')
+    end_time = data.get('end_time')
+    description = data.get('description')
+    public = data.get('public')
+    user_id = data.get('user_id') 
+
+    # 检查`start_time`和`end_time`; 并转换为datetime对象
+    if not start_time or not end_time:
+        return jsonify({"status": "error", "message": "start_time和end_time不能为空"})
+    try:
+        start_time = datetime.fromisoformat(start_time)
+        end_time = datetime.fromisoformat(end_time)
+    except ValueError:
+        return jsonify({"status": "error", "message": "start_time和end_time格式不正确"})
+
+    # 检查`description`
+    if not description:
+        return jsonify({"status": "error", "message": "description不能为空"})
+
+    # 设置status为“审核中”
+    status = "审核中"
+
+    cursor = conn.cursor()
+
+    # 查询当前最大的reservation_id
+    cursor.execute("SELECT MAX(reservation_id) FROM Reservation")
+    max_reservation_id = cursor.fetchone()[0]
+
+    if max_reservation_id is None:
+        new_reservation_id = 1
+    else:
+        new_reservation_id = max_reservation_id + 1
+
+    # 插入预约记录
+    insert_query = "INSERT INTO reservation (reservation_id, start_time, end_time, resource_id, status, description, public) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+    cursor.execute(insert_query, (new_reservation_id, start_time, end_time, resource_id, status, description, public))
+
+    # 插入usage_record表
+    cursor.execute("SELECT MAX(record_id) FROM UsageRecord")
+    max_record_id = cursor.fetchone()[0]
+    if max_record_id is None:
+        new_record_id = 1
+    else:
+        new_record_id = max_record_id + 1
+    insert_usage_record_query = "INSERT INTO UsageRecord (record_id, user_id, reservation_id) VALUES (%s, %s, %s)"
+    cursor.execute(insert_usage_record_query, (new_record_id, user_id, new_reservation_id))
+
+    # 提交事务
+    conn.commit()
+
+    response = {
+        "status": "success",
+        "message": "预约记录插入成功"
+    }
+
+    return jsonify(response)
+
+@app.route("/get-my-reservations", methods=['GET'])
+def get_my_reservations():
+    user_id = request.args.get('userID')
+
+    # 检查`user_id`
+    if not user_id:
+        return jsonify({"status": "error", "message": "userID不能为空"})
+
+    cursor = conn.cursor()
+    
+    # 查询该用户的预约记录
+    query = "SELECT r.reservation_id, r.start_time, r.end_time, r.resource_id, r.status, r.description, r.public " \
+            "FROM reservation r " \
+            "JOIN usageRecord ur ON r.reservation_id = ur.reservation_id " \
+            "WHERE ur.user_id = %s"
+    
+    cursor.execute(query, (user_id,))
+    reservations = cursor.fetchall()
+
+    response = {
+        "status": "success",
+        "reservations": []
+    }
+
+    # 查询资源名称
+    resource_query = "SELECT name FROM Resource WHERE resource_id = %s"
+    for reservation in reservations:
+        cursor.execute(resource_query, (reservation[3],))  # reservation[3] 是 resource_id
+        resource_name = cursor.fetchone()[0]  # 获取资源名称
+
+        start_time_str = reservation[1].strftime('%Y-%m-%d %H:%M')  # 将开始时间转化为`YY-MM-DD-HH:mm`的格式
+        end_time_str = reservation[2].strftime('%Y-%m-%d %H:%M')  # 将结束时间转化为`YY-MM-DD-HH:mm`的格式
+
+        reservation_data = {
+            "reservation_id": reservation[0],
+            "start_time": start_time_str,
+            "end_time": end_time_str,
+            "resource_name": resource_name,  # 将资源名称添加到返回数据中
+            "status": reservation[4],
+            "description": reservation[5],
+            "public": '是' if reservation[6] else '否'
+        }
+        response["reservations"].append(reservation_data)
+    return jsonify(response)
+
+
+
 
 

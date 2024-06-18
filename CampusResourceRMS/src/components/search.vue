@@ -62,11 +62,16 @@
     </v-row>
     <v-row>
       <v-col cols="12">
-        <v-data-table :headers="headers" :items="results">
+        <!-- 展示搜索结果(符合条件的记录) -->
+        <v-data-table :headers="headers" :items="results" items-per-page="7" items-per-page-text="每页显示">
+          <template v-slot:item.capacity="{ value }">
+            <v-chip :color="get_capacity_color(value)">
+              {{ value }}
+            </v-chip>
+          </template>
           <template v-slot:item.actions="{ item }">
-            <v-icon class="me-2" size="small" @click="reserveItem(item)">
-              mdi-note-edit-outline
-            </v-icon>
+            <v-btn class="me-2" color="green" size="small" @click="reserveItem(item)">预约</v-btn>
+            <v-btn class="me-2" color="blue" size="small" @click="">查看</v-btn>
           </template>
           <template v-slot:no-data>
             <v-card-text>
@@ -76,6 +81,7 @@
         </v-data-table>
       </v-col>
     </v-row>
+    <!-- 预约对话框 -->
     <v-dialog v-model="reserveDialog" max-width="500px">
       <v-card>
         <v-card-title>
@@ -83,21 +89,47 @@
         </v-card-title>
 
         <v-card-text>
-          <v-container>
+          <v-container v-if="reservedIndex > -1">
             <v-row>
               <v-col cols="12">
-                <v-text-field
-                  v-model="reservedItem.title"
-                  label="标题"
-                ></v-text-field>
+                <span>资源名称: {{ results[reservedIndex].name }}</span>
               </v-col>
             </v-row>
             <v-row>
               <v-col cols="12">
-                <v-text-field
-                  v-model="reservedItem.description"
-                  label="描述"
-                ></v-text-field>
+                <span>资源位置和类型: {{ results[reservedIndex].location }} - {{ results[reservedIndex].type_name }}</span>
+              </v-col>
+            </v-row>
+            <v-row>
+              <v-col cols="12">
+                <span>开始时间: {{ formatDateTime(reservedItem.start_time) }}</span>
+              </v-col>
+            </v-row>
+            <v-row>
+              <v-col cols="12">
+                <span>结束时间: {{ formatDateTime(reservedItem.end_time) }}</span>
+              </v-col>
+            </v-row>
+            <v-row>
+              <v-col cols="12">
+                <span>预约总时长: {{ calculateDuration(reservedItem.start_time, reservedItem.end_time) }}</span>
+              </v-col>
+            </v-row>
+            <v-row>
+              <v-col cols="12">
+                <v-textarea 
+                  v-model="reservedItem.description" 
+                  clearable 
+                  variant="outlined"
+                  label="请输入预约该资源的原因" 
+                  :rules="[v => !!v || '描述信息是必填项']"
+                  error-messages="描述信息是必填项"
+                  rows="3"></v-textarea>
+              </v-col>
+            </v-row>
+            <v-row>
+              <v-col cols="12">
+                <v-checkbox v-model="reservedItem.public" label="公开预约"></v-checkbox>
               </v-col>
             </v-row>
           </v-container>
@@ -109,35 +141,46 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+
+    <!-- TODO: 查看对话框 -->
   </v-container>
 </template>
 
 <script>
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, inject } from 'vue';
 import axios from 'axios';
 
 export default {
   setup() {
+    const userId = inject('user_id');
     const search = ref('');
-    const type = ref('');
-    const capacity = ref(0);
-    const location = ref('');
+    const type = ref(null);
+    const capacity = ref(null);
+    const location = ref(null);
     const types = ref([]);
     const capacities = ref([]);
     const locations = ref([]);
     const results = ref([]);
     const start_date = ref(new Date());
-    const end_date = ref(new Date());
+    const end_date = ref(new Date(start_date.value.getTime() + 2 * 60 * 60 * 1000)); // 加2小时
     const reserveDialog = ref(false);
     const reservedIndex = ref(-1);
     const reservedItem = ref({
-      title: '',
-      description: ''
+      resourceID: ref(null),
+      start_time: ref(null),
+      end_time: ref(null),
+      description: ref(''),
+      public: ref(true),
     });
     const defaultItem = {
-      title: '',
-      description: ''
+      resourceID: ref(null),
+      start_time: ref(null),
+      end_time: ref(null),
+      description: ref(''),
+      public: ref(true),
     };
+    
 
     const headers = [
       { title: '资源ID', align: 'start', key: 'resource_id' },
@@ -172,7 +215,9 @@ export default {
 
     const reserveItem = (item) => {
       reservedIndex.value = results.value.indexOf(item);
-      reservedItem.value = { ...item };
+      reservedItem.value.resourceID = item.resource_id
+      reservedItem.value.start_time = new Date(start_date.value)
+      reservedItem.value.end_time = new Date(end_date.value)
       reserveDialog.value = true;
     };
 
@@ -182,11 +227,62 @@ export default {
       reservedIndex.value = -1;
     };
 
-    const reserve = () => {
+    const reserve = async () => {
       if (reservedIndex.value > -1) {
-        results.value[reservedIndex.value] = { ...reservedItem.value };
+        try {
+          console.log("userId:")
+          console.log(userId.value)
+          const response = await axios.post('http://127.0.0.1:5000/reserve', {
+            resource_id: reservedItem.value.resourceID,
+            start_time: reservedItem.value.start_time,
+            end_time: reservedItem.value.end_time,
+            description: reservedItem.value.description,
+            public: reservedItem.value.public,
+            user_id: userId.value,
+          });
+
+          if (response.data.status === 'success') {
+            console.log('预约成功:', response.data.message);
+            // 更新`results`
+            await fetchResults();
+          } else {
+            console.error('预约失败:', response.data.message);
+          }
+        } catch (error) {
+          console.error('预约请求失败', error);
+        }
       }
       close();
+    };
+
+
+    const get_capacity_color = (capacity) => {
+      if (capacity >= 100) {
+        return 'green';
+      } else if (capacity >= 50) {
+        return 'orange';
+      } else {
+        return 'red';
+      }
+    };
+
+    const calculateDuration = (start, end) => {
+      const startTime = new Date(start);
+      const endTime = new Date(end);
+      const duration = endTime.getTime() - startTime.getTime();
+      const hours = Math.floor(duration / (1000 * 60 * 60));
+      const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
+
+      return `${hours}小时 ${minutes}分钟`;
+    };
+
+    const formatDateTime = (datetime) => {
+      if (!datetime) {
+        return '';
+      }
+
+      const date = new Date(datetime);
+      return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
     };
 
     const initialize = async () => {
@@ -209,6 +305,7 @@ export default {
     onMounted(initialize);
 
     return {
+      userId,
       search,
       type,
       capacity,
@@ -225,7 +322,10 @@ export default {
       reservedItem,
       reserveItem,
       close,
-      reserve
+      reserve,
+      get_capacity_color,
+      calculateDuration,
+      formatDateTime,
     };
   }
 };

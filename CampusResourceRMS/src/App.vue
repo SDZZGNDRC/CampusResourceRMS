@@ -9,20 +9,27 @@
       <v-tab to="/auto-schedule-course">自动排课</v-tab>
     </v-tabs>
     <v-container v-if="!isLogin">
-      <Login @update:isLogin="updateIsLogin" />
+      <Login @update:isLogin="updateIsLogin" @update:user_id="updateUserID" />
     </v-container>
-    <router-view v-if="isLogin"></router-view>
+    <router-view v-if="isLogin" :user-id="user_id.value"></router-view>
   </v-app>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, provide } from 'vue';
 import Login from './components/Login.vue';
 const isLogin = ref(false);
+const user_id = ref('');
+
+provide('user_id', user_id);
 
 const updateIsLogin = (value) => {
   isLogin.value = value;
-  console.log(isLogin.value);
+};
+
+const updateUserID = (value) => {
+  user_id.value = value;
+  console.log(user_id.value);
 };
 </script>
 

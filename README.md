@@ -28,7 +28,7 @@ This system aims to provide a unified reservation management platform for variou
 4. description (nullable)
 5. location (nullable)
 6. capacity
-7. status
+7. status (value: accessible, maintenance, unavailable)
 8. responsibleID (Foreign Key) (nullable)
 
 ### Reservation
@@ -61,8 +61,9 @@ This system aims to provide a unified reservation management platform for variou
 2. reservationID (nullable)
 3. userID (nullable)
 4. resourceID (nullable)
-5. key
-6. value
+5. resourcetypeID (nullable)
+6. key
+7. value
 
 
 

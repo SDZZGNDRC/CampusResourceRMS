@@ -42,6 +42,7 @@
     data: () => ({
       isLogin: false,
       valid: true,
+      user_id: '',
       username: '',
       password: '',
       idRules: [
@@ -55,6 +56,7 @@
     methods: {
       emitIsLogin() {
         this.$emit('update:isLogin', this.isLogin);
+        this.$emit('update:user_id', this.user_id);
       },
       submit() {
         if (this.$refs.form.validate()) {
@@ -67,7 +69,9 @@
               // 根据后端返回的结果进行跳转或显示错误信息
               if (response.data.status === 'success') {
                 this.isLogin = true;
+                this.user_id = response.data.user.id;
                 this.emitIsLogin();
+                console.log(response.data)
                 this.$router.push('/search');
               } else {
                 this.username = '';

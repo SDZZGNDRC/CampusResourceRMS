@@ -1,0 +1,11 @@
+tag_id,reservation_id,user_id,resource_id,resource_type_id,key,value
+0,,,,0,color,green
+1,,,,1,color,pink
+2,,,,2,color,blue
+3,,,,3,color,red
+4,,,,4,color,yellow
+5,,,,5,color,purple
+6,,,,6,color,orange
+7,,,,7,color,brown
+8,,,,8,color,black
+9,,,,9,color,white
