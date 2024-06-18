@@ -5,6 +5,7 @@
         "datapool",
         "jsonify",
         "resourcetype",
-        "TCSU"
+        "TCSU",
+        "userdashboard"
     ]
 }
