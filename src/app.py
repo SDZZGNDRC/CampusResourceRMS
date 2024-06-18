@@ -219,6 +219,33 @@ def reserve():
 
     return jsonify(response)
 
+@app.route("/cancel-reserve", methods=['GET'])
+def cancel_reserve():
+    reservation_id = request.args.get('reservation_id')
+    user_id = request.args.get('userID')
+    if not (user_id and reservation_id):
+        return jsonify({"status": "error", "message": "userID和reservationID均不能为空"})
+
+    cursor = conn.cursor()
+
+    # 删除`usageRecord`表中的记录
+    delete_usage_record_query = "DELETE FROM UsageRecord WHERE user_id = %s AND reservation_id = %s"
+    cursor.execute(delete_usage_record_query, (user_id, reservation_id))
+
+    # 删除`reservation`表中的记录
+    delete_reservation_query = "DELETE FROM Reservation WHERE reservation_id = %s"
+    cursor.execute(delete_reservation_query, (reservation_id))
+
+    # 提交事务
+    conn.commit()
+
+    response = {
+        "status": "success",
+        "message": "预约记录删除成功"
+    }
+
+    return jsonify(response)
+
 @app.route("/get-my-reservations", methods=['GET'])
 def get_my_reservations():
     user_id = request.args.get('userID')
