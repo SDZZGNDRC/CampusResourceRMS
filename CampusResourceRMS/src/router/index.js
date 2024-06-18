@@ -41,6 +41,10 @@ const router = createRouter({
       path: '/recent-activities',
       component: () => import('@/components/RecentActivities.vue'),
     },
+    {
+      path: '/user-manager',
+      component: () => import('@/components/UserManager.vue'),
+    },
   ]
 })
 

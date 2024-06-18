@@ -44,6 +44,123 @@ def login():
         # 用户不存在; 返回 json { "status": "error", "message": "用户名或密码错误" }
         return jsonify({"status": "error", "message": "用户名或密码错误"})
 
+@app.route("/get-all-roles", methods=['GET'])
+def get_all_roles():
+    cursor = conn.cursor()
+
+    query = "SELECT role_id, role_name, description FROM Role"
+    cursor.execute(query)
+    roles = cursor.fetchall()
+
+    response = {
+        "status": "success",
+        "roles": []
+    }
+
+    for role in roles:
+        role_data = {
+            "role_id": role[0],
+            "role_name": role[1],
+            "description": role[2]
+        }
+        response["roles"].append(role_data)
+
+    return jsonify(response)
+
+@app.route("/get-all-users", methods=['GET'])
+def get_all_users():
+    cursor = conn.cursor()
+
+    query = """
+        SELECT u.user_id, u.username, u.password, u.role_id, r.role_name, u.email
+        FROM User u
+        JOIN Role r ON u.role_id = r.role_id
+    """
+    cursor.execute(query)
+    users = cursor.fetchall()
+
+    response = {
+        "status": "success",
+        "users": []
+    }
+
+    for user in users:
+        user_data = {
+            "user_id": user[0],
+            "username": user[1],
+            "password": user[2],
+            "role_id": user[3],
+            "role_name": user[4],
+            "email": user[5]
+        }
+        response["users"].append(user_data)
+
+    return jsonify(response)
+
+@app.route("/add-user", methods=['POST'])
+def add_user():
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    role_id = data.get('role_id')
+    email = data.get('email')
+
+    cursor = conn.cursor()
+    # FIXME: 没有考虑`user_id`
+    insert_query = "INSERT INTO User (username, password, email, role_id) VALUES (%s, %s, %s, %s)"
+    cursor.execute(insert_query, (username, password, email, role_id))
+
+    conn.commit()
+
+    response = {
+        "status": "success",
+        "message": "用户添加成功"
+    }
+
+    return jsonify(response)
+
+@app.route("/update-user", methods=['POST'])
+def update_user():
+    data = request.json
+    user_id = data.get('user_id')
+    username = data.get('username')
+    password = data.get('password')
+    role_id = data.get('role_id')
+    email = data.get('email')
+
+    cursor = conn.cursor()
+
+    update_query = "UPDATE User SET username = %s, password = %s, email = %s, role_id = %s WHERE user_id = %s"
+    cursor.execute(update_query, (username, password, email, role_id, user_id))
+
+    conn.commit()
+
+    response = {
+        "status": "success",
+        "message": "用户信息更新成功"
+    }
+
+    return jsonify(response)
+
+@app.route("/delete-user", methods=['POST'])
+def delete_user():
+    data = request.json
+    user_id = data.get('user_id')
+
+    cursor = conn.cursor()
+
+    delete_query = "DELETE FROM User WHERE user_id = %s"
+    cursor.execute(delete_query, (user_id,))
+
+    conn.commit()
+
+    response = {
+        "status": "success",
+        "message": "用户删除成功"
+    }
+
+    return jsonify(response)
+
 @app.route("/get-all-locations", methods=['GET'])
 def get_all_locations():
     # 查询所有不重复的地点信息
@@ -342,7 +459,6 @@ def get_recent_reservations():
             "resource_name": reservation[5]
         }
         response["reservations"].append(reservation_data)
-    print(f'recent activities: {response["reservations"]}')
     return jsonify(response)
 
 
