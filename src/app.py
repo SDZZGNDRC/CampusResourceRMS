@@ -90,7 +90,7 @@ def get_all_users():
             "username": user[1],
             "password": user[2],
             "role_id": user[3],
-            "role_name": user[4],
+            # "role_name": user[4],
             "email": user[5]
         }
         response["users"].append(user_data)
@@ -106,9 +106,14 @@ def add_user():
     email = data.get('email')
 
     cursor = conn.cursor()
-    # FIXME: 没有考虑`user_id`
-    insert_query = "INSERT INTO User (username, password, email, role_id) VALUES (%s, %s, %s, %s)"
-    cursor.execute(insert_query, (username, password, email, role_id))
+    
+    # 获取下一个可用的user_id
+    cursor.execute("SELECT MAX(user_id) FROM User")
+    max_id = cursor.fetchone()[0]
+    new_user_id = max_id + 1 if max_id is not None else 1
+
+    insert_query = "INSERT INTO User (user_id, username, password, email, role_id) VALUES (%s, %s, %s, %s, %s)"
+    cursor.execute(insert_query, (new_user_id, username, password, email, role_id))
 
     conn.commit()
 
@@ -118,6 +123,7 @@ def add_user():
     }
 
     return jsonify(response)
+
 
 @app.route("/update-user", methods=['POST'])
 def update_user():
