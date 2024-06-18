@@ -92,9 +92,6 @@ def search():
     type_name = request.args.get('type')
     start_date: str = request.args.get('start_date') # str; maybe null or empty; ISO 8601 格式
     end_date: str = request.args.get('end_date') # str; maybe null or empty; ISO 8601 格式
-    
-    print(type(start_date), start_date)
-    print(type(end_date), end_date)
 
     cursor = conn.cursor()
 
@@ -267,7 +264,59 @@ def get_my_reservations():
         response["reservations"].append(reservation_data)
     return jsonify(response)
 
+@app.route("/get-recent-reservations", methods=['GET'])
+def get_recent_reservations():
+    start_time = request.args.get('start_time')
+    if start_time:
+        start_datetime = datetime.fromisoformat(start_time)
+    else:
+        start_datetime = None
 
+    cursor = conn.cursor()
+
+    if start_datetime:
+        query = """
+            SELECT r.reservation_id, r.start_time, r.end_time, r.description, u.username, res.name
+            FROM Reservation r
+            JOIN UsageRecord ur ON r.reservation_id = ur.reservation_id
+            JOIN Resource res ON r.resource_id = res.resource_id
+            JOIN User u ON ur.user_id = u.user_id
+            WHERE r.end_time > %s AND r.status = '审核通过' AND r.public = 1
+        """
+        cursor.execute(query, (start_datetime,))
+    else:
+        query = """
+            SELECT r.reservation_id, r.start_time, r.end_time, r.description, u.username, res.name
+            FROM Reservation r
+            JOIN UsageRecord ur ON r.reservation_id = ur.reservation_id
+            JOIN Resource res ON r.resource_id = res.resource_id
+            JOIN User u ON ur.user_id = u.user_id
+            WHERE r.status = '审核通过' AND r.public = 1
+        """
+        cursor.execute(query)
+
+    reservations = cursor.fetchall()
+
+    response = {
+        "status": "success",
+        "reservations": []
+    }
+
+    for reservation in reservations:
+        start_time_str = reservation[1].strftime('%Y-%m-%d %H:%M')
+        end_time_str = reservation[2].strftime('%Y-%m-%d %H:%M')
+
+        reservation_data = {
+            "reservation_id": reservation[0],
+            "start_time": start_time_str,
+            "end_time": end_time_str,
+            "description": reservation[3],
+            "user_name": reservation[4],
+            "resource_name": reservation[5]
+        }
+        response["reservations"].append(reservation_data)
+    print(f'recent activities: {response["reservations"]}')
+    return jsonify(response)
 
 
 

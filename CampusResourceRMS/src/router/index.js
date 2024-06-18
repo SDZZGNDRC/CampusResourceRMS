@@ -36,8 +36,11 @@ const router = createRouter({
     {
       path: '/my-records',
       component: () => import('@/components/MyRecords.vue')
-    }
-    // 可以根据您的需要添加更多路由
+    },
+    {
+      path: '/recent-activities',
+      component: () => import('@/components/RecentActivities.vue'),
+    },
   ]
 })
 
