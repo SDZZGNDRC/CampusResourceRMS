@@ -13,6 +13,21 @@ conn = mysql.connector.connect(
 )
 CORS(app)
 
+def get_cursor():
+    global conn
+    try:
+        # 尝试获取游标
+        cursor = conn.cursor()
+        
+        # 如果连接有效，直接返回游标
+        return cursor
+    except mysql.connector.errors.OperationalError as e:
+        # 如果连接断开，重新连接数据库并返回新的游标
+        conn.reconnect()
+        cursor = get_cursor()
+        return cursor
+
+
 @app.route("/")
 def hello_world():
     return "<p>Hello, World!</p>"
@@ -22,7 +37,7 @@ def login():
     username = request.form['username']
     password = request.form['password']
     
-    cursor = conn.cursor()
+    cursor = get_cursor()
     query = "SELECT * FROM User WHERE username = %s AND password = %s"
     cursor.execute(query, (username, password))
     
@@ -46,7 +61,7 @@ def login():
 
 @app.route("/get-all-roles", methods=['GET'])
 def get_all_roles():
-    cursor = conn.cursor()
+    cursor = get_cursor()
 
     query = "SELECT role_id, role_name, description FROM Role"
     cursor.execute(query)
@@ -69,7 +84,7 @@ def get_all_roles():
 
 @app.route("/get-all-users", methods=['GET'])
 def get_all_users():
-    cursor = conn.cursor()
+    cursor = get_cursor()
 
     query = """
         SELECT u.user_id, u.username, u.password, u.role_id, r.role_name, u.email
@@ -105,7 +120,7 @@ def add_user():
     role_id = data.get('role_id')
     email = data.get('email')
 
-    cursor = conn.cursor()
+    cursor = get_cursor()
     
     # 获取下一个可用的user_id
     cursor.execute("SELECT MAX(user_id) FROM User")
@@ -134,7 +149,7 @@ def update_user():
     role_id = data.get('role_id')
     email = data.get('email')
 
-    cursor = conn.cursor()
+    cursor = get_cursor()
 
     update_query = "UPDATE User SET username = %s, password = %s, email = %s, role_id = %s WHERE user_id = %s"
     cursor.execute(update_query, (username, password, email, role_id, user_id))
@@ -153,7 +168,7 @@ def delete_user():
     data = request.json
     user_id = data.get('user_id')
 
-    cursor = conn.cursor()
+    cursor = get_cursor()
 
     delete_query = "DELETE FROM User WHERE user_id = %s"
     cursor.execute(delete_query, (user_id,))
@@ -170,7 +185,7 @@ def delete_user():
 @app.route("/get-all-locations", methods=['GET'])
 def get_all_locations():
     # 查询所有不重复的地点信息
-    cursor = conn.cursor()
+    cursor = get_cursor()
     cursor.execute("SELECT DISTINCT location FROM Resource")
     locations = [row[0] for row in cursor.fetchall()]
 
@@ -186,7 +201,7 @@ def get_all_locations():
 @app.route("/get-all-resource-types", methods=['GET'])
 def get_all_resource_types():
     # 查询所有不重复的资源类型信息
-    cursor = conn.cursor()
+    cursor = get_cursor()
     cursor.execute("SELECT DISTINCT type_name FROM resourcetype")
     resource_types = [row[0] for row in cursor.fetchall()]
     # 构建返回的 JSON 数据
@@ -198,7 +213,7 @@ def get_all_resource_types():
 
 @app.route("/get-all-resources-capacities", methods=['GET'])
 def get_all_res_caps():
-    cursor = conn.cursor()
+    cursor = get_cursor()
     cursor.execute("SELECT DISTINCT capacity FROM resource")
     caps = sorted([row[0] for row in cursor.fetchall()])
     response = {
@@ -216,7 +231,7 @@ def search():
     start_date: str = request.args.get('start_date') # str; maybe null or empty; ISO 8601 格式
     end_date: str = request.args.get('end_date') # str; maybe null or empty; ISO 8601 格式
 
-    cursor = conn.cursor()
+    cursor = get_cursor()
 
     # 构建查询语句
     query = "SELECT r.resource_id, r.name, r.description, r.location, r.capacity, r.status, rt.type_name " \
@@ -307,7 +322,7 @@ def reserve():
     # 设置status为“审核中”
     status = "审核中"
 
-    cursor = conn.cursor()
+    cursor = get_cursor()
 
     # 查询当前最大的reservation_id
     cursor.execute("SELECT MAX(reservation_id) FROM Reservation")
@@ -349,7 +364,7 @@ def cancel_reserve():
     if not (user_id and reservation_id):
         return jsonify({"status": "error", "message": "userID和reservationID均不能为空"})
 
-    cursor = conn.cursor()
+    cursor = get_cursor()
 
     # 删除`usageRecord`表中的记录
     delete_usage_record_query = "DELETE FROM UsageRecord WHERE user_id = %s AND reservation_id = %s"
@@ -377,7 +392,7 @@ def get_my_reservations():
     if not user_id:
         return jsonify({"status": "error", "message": "userID不能为空"})
 
-    cursor = conn.cursor()
+    cursor = get_cursor()
     
     # 查询该用户的预约记录
     query = "SELECT r.reservation_id, r.start_time, r.end_time, r.resource_id, r.status, r.description, r.public " \
@@ -422,7 +437,7 @@ def get_recent_reservations():
     else:
         start_datetime = None
 
-    cursor = conn.cursor()
+    cursor = get_cursor()
 
     if start_datetime:
         query = """

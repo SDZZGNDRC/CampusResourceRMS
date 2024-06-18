@@ -2,6 +2,8 @@
     <v-data-table
       :headers="headers"
       :items="users"
+      items-per-page="9" 
+      items-per-page-text="每页显示"
     >
       <template v-slot:top>
         <v-toolbar
@@ -83,12 +85,14 @@
         <v-icon
           class="me-2"
           size="small"
+          color="primary"
           @click="editItem(item)"
         >
           mdi-pencil
         </v-icon>
         <v-icon
           size="small"
+          color="red"
           @click="deleteItem(item)"
         >
           mdi-delete
