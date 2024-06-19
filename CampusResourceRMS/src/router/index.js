@@ -49,6 +49,10 @@ const router = createRouter({
       path: '/resource-manager',
       component: () => import('@/components/ResourceManager.vue'),
     },
+    {
+      path: '/reservation-manager',
+      component: () => import('@/components/ReservationManager.vue'),
+    },
   ]
 })
 

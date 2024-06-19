@@ -449,7 +449,6 @@ def reserve_course():
     else:
         new_record_id = max_record_id + 1
 
-
     # insert the reservation into the Reservation table
     description = f"Course: {course_name}, Number of students: {student_number}"
     cursor.execute(
@@ -520,7 +519,7 @@ def reserve():
         new_record_id = 1
     else:
         new_record_id = max_record_id + 1
-    insert_usage_record_query = "INSERT INTO UsageRecord (record_id, user_id, reservation_id, primary, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s)"
+    insert_usage_record_query = "INSERT INTO UsageRecord (record_id, user_id, reservation_id, `primary`, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s)"
     cursor.execute(insert_usage_record_query, (new_record_id, user_id, new_reservation_id, 1, start_time, end_time))
 
     # 提交事务
@@ -567,20 +566,19 @@ def cancel_reserve():
 @app.route("/get-my-reservations", methods=['GET'])
 def get_my_reservations():
     user_id = request.args.get('userID')
-
-    # 检查`user_id`
-    if not user_id:
-        return jsonify({"status": "error", "message": "userID不能为空"})
-
     cursor = get_cursor()
-    
-    # 查询该用户的预约记录
-    query = "SELECT r.reservation_id, r.start_time, r.end_time, r.resource_id, r.status, r.description, r.public " \
-            "FROM reservation r " \
-            "JOIN usageRecord ur ON r.reservation_id = ur.reservation_id " \
-            "WHERE ur.user_id = %s"
-    
-    cursor.execute(query, (user_id,))
+    if user_id:
+        # 查询该用户的预约记录
+        query = "SELECT r.reservation_id, r.start_time, r.end_time, r.resource_id, r.status, r.description, r.public " \
+                "FROM reservation r " \
+                "JOIN usageRecord ur ON r.reservation_id = ur.reservation_id " \
+                "WHERE ur.user_id = %s"
+        cursor.execute(query, (user_id,))
+    else:
+        query = "SELECT r.reservation_id, r.start_time, r.end_time, r.resource_id, r.status, r.description, r.public " \
+                "FROM reservation r "
+        cursor.execute(query)
+
     reservations = cursor.fetchall()
 
     response = {
@@ -662,5 +660,25 @@ def get_recent_reservations():
         response["reservations"].append(reservation_data)
     return jsonify(response)
 
+@app.route("/update-reservation", methods=['POST'])
+def update_reservation():
+    data = request.json
+    reservation_id = data.get('reservation_id')
+    status = data.get('status')
+    print(data)
+    cursor = get_cursor()
+
+    # 更新预约记录的状态
+    update_query = "UPDATE Reservation SET status = %s WHERE reservation_id = %s"
+    cursor.execute(update_query, (status, reservation_id))
+
+    conn.commit()
+
+    response = {
+        "status": "success",
+        "message": "预约记录状态更新成功"
+    }
+
+    return jsonify(response)
 
 

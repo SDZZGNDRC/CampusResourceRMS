@@ -8,6 +8,7 @@
       <v-tab to="/auto-schedule-course">自动排课</v-tab>
       <v-tab to="/user-manager">用户管理</v-tab>
       <v-tab to="/resource-manager">资源管理</v-tab>
+      <v-tab to="/reservation-manager">预约管理</v-tab>
       <!-- <v-spacer></v-spacer> -->
     </v-tabs>
     <v-container v-if="!isLogin">
