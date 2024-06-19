@@ -52,6 +52,9 @@ This system aims to provide a unified reservation management platform for variou
 1. usageRecordID (Primary Key)
 2. reservationID (Foreign Key)
 3. userID (Foreign Key)
+4. primary (boolean)
+5. startTime
+6. endTime
 
 ### Tag
 

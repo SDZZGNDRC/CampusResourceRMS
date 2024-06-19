@@ -1,5 +1,6 @@
+from typing import List
 from flask import Flask, jsonify, request
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask_cors import CORS
 import mysql.connector
 app = Flask(__name__)
@@ -371,6 +372,105 @@ def update_resource():
 
     return jsonify(response)
 
+def choose_resource(taken):
+    # NOTICE: 该函数暂未实现, 为提前演示, 随机返回一个资源ID.
+    cursor = get_cursor()
+    
+    # 执行SQL查询来随机选择一个资源ID
+    query = "SELECT resource_id FROM Resource ORDER BY RAND() LIMIT 1;"
+    cursor.execute(query)
+    
+    # 获取查询结果
+    result = cursor.fetchone()
+    
+    if result:
+        return result[0]  # 返回资源ID
+    else:
+        return None  # 如果未找到资源ID，则返回None
+
+def idx2courseTime(start, idx):
+    start_date = start
+    course_times = [
+        ["08:00", "09:45"],
+        ["10:05", "11:50"],
+        ["14:00", "15:45"],
+        ["16:05", "17:50"],
+        ["18:40", "20:25"],
+        ["20:45", "22:30"],
+    ]
+    
+    day_offset = idx // 6
+    course_time_idx = idx % 6
+
+    course_date = start_date + timedelta(days=day_offset)
+    course_time = course_times[course_time_idx]
+    
+    start_time_str = course_date.strftime("%Y-%m-%d") + "T" + course_time[0] + ":00"
+    end_time_str = course_date.strftime("%Y-%m-%d") + "T" + course_time[1] + ":00"
+    
+    return datetime.fromisoformat(start_time_str), datetime.fromisoformat(end_time_str)
+
+@app.route("/reserve-course", methods=['POST'])
+def reserve_course():
+    data = request.json
+    user_id = data.get('user_id')
+    start_time = datetime.fromisoformat(data.get('start_time'))  # convert string to datetime
+    end_time = datetime.fromisoformat(data.get('end_time'))      # convert string to datetime
+    course_name = data.get('course_name')
+    student_number = data.get('student_number')
+    selected: List[bool] = data.get('selected')
+    
+    # calculate the start and end dates of each class in the course
+    taken = []
+    for i, selected_day in enumerate(selected):
+        if selected_day:
+            taken.append(idx2courseTime(start_time, i))
+    
+    # find an available resource
+    resource_id = choose_resource(taken)
+    
+    cursor = get_cursor()
+
+    # 查询当前最大的reservation_id
+    cursor.execute("SELECT MAX(reservation_id) FROM Reservation")
+    max_reservation_id = cursor.fetchone()[0]
+
+    if max_reservation_id is None:
+        new_reservation_id = 1
+    else:
+        new_reservation_id = max_reservation_id + 1
+
+    # 查询当前最大的 record_id
+    cursor.execute("SELECT MAX(record_id) FROM UsageRecord")
+    max_record_id = cursor.fetchone()[0]
+
+    if max_record_id is None:
+        new_record_id = 1
+    else:
+        new_record_id = max_record_id + 1
+
+
+    # insert the reservation into the Reservation table
+    description = f"Course: {course_name}, Number of students: {student_number}"
+    cursor.execute(
+        "INSERT INTO Reservation (reservation_id, start_time, end_time, resource_id, status, description, public) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+        (new_reservation_id, start_time, end_time, resource_id, '审核中', description, True)
+    )
+    
+    # insert the usage records into the UsageRecord table
+    for start_date, end_date in taken:
+        print(start_date)
+        print(end_date)
+        cursor.execute(
+            "INSERT INTO UsageRecord (record_id, user_id, reservation_id, `primary`, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s)",
+            (new_record_id, user_id, new_reservation_id, True, start_date, end_date)
+        )
+        new_record_id += 1
+    
+    conn.commit()
+    
+    return jsonify({'message': 'Course reserved successfully'}), 201
+
 @app.route("/reserve", methods=['POST'])
 def reserve():
     # 获取POST请求的JSON数据
@@ -420,8 +520,8 @@ def reserve():
         new_record_id = 1
     else:
         new_record_id = max_record_id + 1
-    insert_usage_record_query = "INSERT INTO UsageRecord (record_id, user_id, reservation_id) VALUES (%s, %s, %s)"
-    cursor.execute(insert_usage_record_query, (new_record_id, user_id, new_reservation_id))
+    insert_usage_record_query = "INSERT INTO UsageRecord (record_id, user_id, reservation_id, primary, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s)"
+    cursor.execute(insert_usage_record_query, (new_record_id, user_id, new_reservation_id, 1, start_time, end_time))
 
     # 提交事务
     conn.commit()

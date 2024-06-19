@@ -52,6 +52,9 @@ CREATE TABLE `UsageRecord` (
   `record_id` int NOT NULL,
   `user_id` int NOT NULL,
   `reservation_id` int NOT NULL,
+  `primary` boolean NOT NULL,
+  `start_time` datetime,
+  `end_time` datetime,
   PRIMARY KEY (`record_id`),
   FOREIGN KEY (`user_id`) REFERENCES `User` (`user_id`),
   FOREIGN KEY (`reservation_id`) REFERENCES `Reservation` (`reservation_id`)

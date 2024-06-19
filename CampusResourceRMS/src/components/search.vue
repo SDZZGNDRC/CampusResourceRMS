@@ -238,8 +238,6 @@ export default {
     const reserve = async () => {
       if (reservedIndex.value > -1) {
         try {
-          console.log("userId:")
-          console.log(userId.value)
           const response = await axios.post('http://127.0.0.1:5000/reserve', {
             resource_id: reservedItem.value.resourceID,
             start_time: reservedItem.value.start_time,
