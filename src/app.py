@@ -33,11 +33,6 @@ def get_cursor():
         cursor = get_cursor()
         return cursor
 
-
-@app.route("/")
-def hello_world():
-    return "<p>Hello, World!</p>"
-
 @app.route("/login", methods=['POST'])
 def login():
     global mutex

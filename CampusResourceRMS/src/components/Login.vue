@@ -43,6 +43,7 @@
       isLogin: false,
       valid: true,
       user_id: '',
+      role_id: '',
       username: '',
       password: '',
       idRules: [
@@ -57,6 +58,7 @@
       emitIsLogin() {
         this.$emit('update:isLogin', this.isLogin);
         this.$emit('update:user_id', this.user_id);
+        this.$emit('update:role_id', this.role_id);
       },
       submit() {
         if (this.$refs.form.validate()) {
@@ -70,9 +72,10 @@
               if (response.data.status === 'success') {
                 this.isLogin = true;
                 this.user_id = response.data.user.id;
+                this.role_id = response.data.user.role_id;
                 this.emitIsLogin();
                 console.log(response.data)
-                this.$router.push('/search');
+                this.$router.push('/recent-activities');
               } else {
                 this.username = '';
                 this.password = '';
