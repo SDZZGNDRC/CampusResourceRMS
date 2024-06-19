@@ -3,8 +3,26 @@
     <v-container>
       <v-row>
         <v-col cols="12">
+          <v-text-field
+            v-model="search"
+            label="过滤"
+            prepend-inner-icon="mdi-magnify"
+            variant="outlined"
+            hide-details
+            single-line
+          ></v-text-field>
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col cols="12">
           <!-- 展示结果 -->
-          <v-data-table :headers="headers" :items="results" items-per-page="10" items-per-page-text="每页显示">
+          <v-data-table 
+            :headers="headers" 
+            :items="results" 
+            items-per-page="8" 
+            items-per-page-text="每页显示"
+            :search="search"
+          >
             <template v-slot:item.status="{ value }">
               <v-chip :color="get_status_color(value)">
                 {{ value }}
@@ -63,7 +81,8 @@
         { title: '预约状态', key: 'status', sortable: false },
         { title: '操作', key: 'actions', sortable: false },
       ];
-  
+
+      const search = ref('');
       const results = ref([]);
   
       const get_status_color = (value) => {
@@ -144,6 +163,7 @@
   
       return {
         headers,
+        search,
         results,
         userId,
         get_status_color,
