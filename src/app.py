@@ -1,6 +1,7 @@
 from typing import List
 from flask import Flask, jsonify, request
 from datetime import datetime, timedelta
+import threading
 from flask_cors import CORS
 import mysql.connector
 app = Flask(__name__)
@@ -13,6 +14,10 @@ conn = mysql.connector.connect(
     autocommit=False
 )
 CORS(app)
+
+
+# 在全局范围内创建一个互斥锁对象
+mutex = threading.Lock()
 
 def get_cursor():
     global conn
@@ -35,9 +40,10 @@ def hello_world():
 
 @app.route("/login", methods=['POST'])
 def login():
+    global mutex
     username = request.form['username']
     password = request.form['password']
-    
+    mutex.acquire()
     cursor = get_cursor()
     query = "SELECT * FROM User WHERE username = %s AND password = %s"
     cursor.execute(query, (username, password))
@@ -55,13 +61,16 @@ def login():
         }
         response = jsonify({"status": "success", "user": user_data})
         response.headers['Authorization'] = 'Bearer ' + token
-        return response
     else:
         # 用户不存在; 返回 json { "status": "error", "message": "用户名或密码错误" }
-        return jsonify({"status": "error", "message": "用户名或密码错误"})
+        response = jsonify({"status": "error", "message": "用户名或密码错误"})
+    mutex.release()
+    return response
 
 @app.route("/get-all-roles", methods=['GET'])
 def get_all_roles():
+    global mutex
+    mutex.acquire()
     cursor = get_cursor()
 
     query = "SELECT role_id, role_name, description FROM Role"
@@ -80,11 +89,13 @@ def get_all_roles():
             "description": role[2]
         }
         response["roles"].append(role_data)
-
+    mutex.release()
     return jsonify(response)
 
 @app.route("/get-all-users", methods=['GET'])
 def get_all_users():
+    global mutex
+    mutex.acquire()
     cursor = get_cursor()
 
     query = """
@@ -110,7 +121,7 @@ def get_all_users():
             "email": user[5]
         }
         response["users"].append(user_data)
-
+    mutex.release()
     return jsonify(response)
 
 @app.route("/add-user", methods=['POST'])
@@ -120,7 +131,8 @@ def add_user():
     password = data.get('password')
     role_id = data.get('role_id')
     email = data.get('email')
-
+    global mutex
+    mutex.acquire()
     cursor = get_cursor()
     
     # 获取下一个可用的user_id
@@ -137,12 +149,14 @@ def add_user():
         "status": "success",
         "message": "用户添加成功"
     }
-
+    mutex.release()
     return jsonify(response)
 
 
 @app.route("/update-user", methods=['POST'])
 def update_user():
+    global mutex
+    mutex.acquire()
     data = request.json
     user_id = data.get('user_id')
     username = data.get('username')
@@ -161,14 +175,16 @@ def update_user():
         "status": "success",
         "message": "用户信息更新成功"
     }
-
+    mutex.release()
     return jsonify(response)
 
 @app.route("/delete-user", methods=['POST'])
 def delete_user():
     data = request.json
     user_id = data.get('user_id')
-
+    global mutex
+    mutex.acquire()
+    
     cursor = get_cursor()
 
     delete_query = "DELETE FROM User WHERE user_id = %s"
@@ -180,11 +196,13 @@ def delete_user():
         "status": "success",
         "message": "用户删除成功"
     }
-
+    mutex.release()
     return jsonify(response)
 
 @app.route("/get-all-locations", methods=['GET'])
 def get_all_locations():
+    global mutex
+    mutex.acquire()
     # 查询所有不重复的地点信息
     cursor = get_cursor()
     cursor.execute("SELECT DISTINCT location FROM Resource")
@@ -197,11 +215,14 @@ def get_all_locations():
     }
 
     # 将结果转换为 JSON 格式并返回
+    mutex.release()
     return jsonify(response)
 
 @app.route("/get-all-resource-types", methods=['GET'])
 def get_all_resource_types():
     # 查询所有的资源类型信息
+    global mutex
+    mutex.acquire()
     cursor = get_cursor()
     cursor.execute("SELECT * FROM resourcetype")
     resource_types = []
@@ -216,10 +237,13 @@ def get_all_resource_types():
         "status": "success",
         "resource_types": resource_types
     }
+    mutex.release()
     return jsonify(response)
 
 @app.route("/get-all-resources-capacities", methods=['GET'])
 def get_all_res_caps():
+    global mutex
+    mutex.acquire()
     cursor = get_cursor()
     cursor.execute("SELECT DISTINCT capacity FROM resource")
     caps = sorted([row[0] for row in cursor.fetchall()])
@@ -227,10 +251,13 @@ def get_all_res_caps():
         "status": "success",
         "caps": caps
     }
+    mutex.release()
     return jsonify(response)
 
 @app.route("/search", methods=['GET'])
 def search():
+    global mutex
+    mutex.acquire()
     name = request.args.get('name')
     location = request.args.get('location')
     capacity = request.args.get('capacity')
@@ -299,11 +326,13 @@ def search():
             "type_id": resource[6]
         }
         response["resources"].append(resource_data)
-
+    mutex.release()
     return jsonify(response)
 
 @app.route("/add-resource", methods=['POST'])
 def add_resource():
+    global mutex
+    mutex.acquire()
     name = request.json.get('name')
     description = request.json.get('description')
     location = request.json.get('location')
@@ -327,12 +356,14 @@ def add_resource():
         "status": "success",
         "message": "资源添加成功"
     }
-
+    mutex.release()
     return jsonify(response)
 
 
 @app.route("/delete-resource", methods=['POST'])
 def delete_resource():
+    global mutex
+    mutex.acquire()
     resource_id = request.json.get('resource_id')
 
     cursor = get_cursor()
@@ -346,11 +377,13 @@ def delete_resource():
         "status": "success",
         "message": "资源删除成功"
     }
-
+    mutex.release()
     return jsonify(response)
 
 @app.route("/update-resource", methods=['POST'])
 def update_resource():
+    global mutex
+    mutex.acquire()
     resource_id = request.json.get('resource_id')
     name = request.json.get('name')
     description = request.json.get('description')
@@ -369,7 +402,7 @@ def update_resource():
         "status": "success",
         "message": "资源信息更新成功"
     }
-
+    mutex.release()
     return jsonify(response)
 
 def choose_resource(taken):
@@ -383,10 +416,12 @@ def choose_resource(taken):
     # 获取查询结果
     result = cursor.fetchone()
     
+    
     if result:
-        return result[0]  # 返回资源ID
+        r = result[0]  # 返回资源ID
     else:
-        return None  # 如果未找到资源ID，则返回None
+        r = None  # 如果未找到资源ID，则返回None
+    return r
 
 def idx2courseTime(start, idx):
     start_date = start
@@ -473,6 +508,7 @@ def reserve_course():
 @app.route("/reserve", methods=['POST'])
 def reserve():
     # 获取POST请求的JSON数据
+    global mutex
     data = request.json
     resource_id = data.get('resource_id')
     start_time = data.get('start_time')
@@ -496,7 +532,7 @@ def reserve():
 
     # 设置status为“审核中”
     status = "审核中"
-
+    mutex.acquire()
     cursor = get_cursor()
 
     # 查询当前最大的reservation_id
@@ -529,11 +565,12 @@ def reserve():
         "status": "success",
         "message": "预约记录插入成功"
     }
-
+    mutex.release()
     return jsonify(response)
 
 @app.route("/cancel-reserve", methods=['GET'])
 def cancel_reserve():
+    global mutex
     reservation_id = request.args.get('reservation_id')
     user_id = request.args.get('userID')
     print(type(reservation_id))
@@ -542,7 +579,7 @@ def cancel_reserve():
     print(user_id)
     if not (user_id and reservation_id):
         return jsonify({"status": "error", "message": "userID和reservationID均不能为空"})
-
+    mutex.acquire()
     cursor = get_cursor()
 
     # 删除`usageRecord`表中的记录
@@ -560,12 +597,14 @@ def cancel_reserve():
         "status": "success",
         "message": "预约记录删除成功"
     }
-
+    mutex.release()
     return jsonify(response)
 
 @app.route("/get-my-reservations", methods=['GET'])
 def get_my_reservations():
+    global mutex
     user_id = request.args.get('userID')
+    mutex.acquire()
     cursor = get_cursor()
     if user_id:
         # 查询该用户的预约记录
@@ -605,16 +644,18 @@ def get_my_reservations():
             "public": '是' if reservation[6] else '否'
         }
         response["reservations"].append(reservation_data)
+    mutex.release()
     return jsonify(response)
 
 @app.route("/get-recent-reservations", methods=['GET'])
 def get_recent_reservations():
+    global mutex
     start_time = request.args.get('start_time')
     if start_time:
         start_datetime = datetime.fromisoformat(start_time)
     else:
         start_datetime = None
-
+    mutex.acquire()
     cursor = get_cursor()
 
     if start_datetime:
@@ -658,14 +699,16 @@ def get_recent_reservations():
             "resource_name": reservation[5]
         }
         response["reservations"].append(reservation_data)
+    mutex.release()
     return jsonify(response)
 
 @app.route("/update-reservation", methods=['POST'])
 def update_reservation():
+    global mutex
     data = request.json
     reservation_id = data.get('reservation_id')
     status = data.get('status')
-    print(data)
+    mutex.acquire()
     cursor = get_cursor()
 
     # 更新预约记录的状态
@@ -678,7 +721,7 @@ def update_reservation():
         "status": "success",
         "message": "预约记录状态更新成功"
     }
-
+    mutex.release()
     return jsonify(response)
 
 

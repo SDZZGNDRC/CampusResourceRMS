@@ -127,8 +127,6 @@
                   clearable 
                   variant="outlined"
                   label="请输入预约该资源的原因" 
-                  :rules="[v => !!v || '描述信息是必填项']"
-                  error-messages="描述信息是必填项"
                   rows="3"></v-textarea>
               </v-col>
             </v-row>
