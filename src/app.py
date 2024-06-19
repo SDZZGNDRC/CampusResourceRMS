@@ -606,7 +606,7 @@ def get_my_reservations():
         query = "SELECT r.reservation_id, r.start_time, r.end_time, r.resource_id, r.status, r.description, r.public, u.username  " \
                 "FROM reservation r " \
                 "JOIN usageRecord ur ON r.reservation_id = ur.reservation_id " \
-                "JOIN User u ON ur.user_id = u.user_id" \
+                "JOIN User u ON ur.user_id = u.user_id " \
                 "WHERE ur.user_id = %s"
         cursor.execute(query, (user_id,))
     else:
