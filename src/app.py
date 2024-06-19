@@ -603,14 +603,17 @@ def get_my_reservations():
     cursor = get_cursor()
     if user_id:
         # 查询该用户的预约记录
-        query = "SELECT r.reservation_id, r.start_time, r.end_time, r.resource_id, r.status, r.description, r.public " \
+        query = "SELECT r.reservation_id, r.start_time, r.end_time, r.resource_id, r.status, r.description, r.public, u.username  " \
                 "FROM reservation r " \
                 "JOIN usageRecord ur ON r.reservation_id = ur.reservation_id " \
+                "JOIN User u ON ur.user_id = u.user_id" \
                 "WHERE ur.user_id = %s"
         cursor.execute(query, (user_id,))
     else:
-        query = "SELECT r.reservation_id, r.start_time, r.end_time, r.resource_id, r.status, r.description, r.public " \
-                "FROM reservation r "
+        query = "SELECT r.reservation_id, r.start_time, r.end_time, r.resource_id, r.status, r.description, r.public, u.username " \
+                "FROM reservation r " \
+                "JOIN usageRecord ur ON r.reservation_id = ur.reservation_id " \
+                "JOIN User u ON ur.user_id = u.user_id"
         cursor.execute(query)
 
     reservations = cursor.fetchall()
@@ -634,6 +637,7 @@ def get_my_reservations():
             "start_time": start_time_str,
             "end_time": end_time_str,
             "resource_name": resource_name,  # 将资源名称添加到返回数据中
+            "username": reservation[7],
             "status": reservation[4],
             "description": reservation[5],
             "public": '是' if reservation[6] else '否'

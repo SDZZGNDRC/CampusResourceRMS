@@ -54,6 +54,7 @@
   
       const headers = [
         { title: '资源名称', align: 'start', key: 'resource_name' },
+        { title: '申请人', key: 'username' },
         { title: '开始时间', key: 'start_time' },
         { title: '结束时间', key: 'end_time' },
         { title: '持续时间', key: 'duration', sortable: false },
