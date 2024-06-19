@@ -45,6 +45,10 @@ const router = createRouter({
       path: '/user-manager',
       component: () => import('@/components/UserManager.vue'),
     },
+    {
+      path: '/resource-manager',
+      component: () => import('@/components/ResourceManager.vue'),
+    },
   ]
 })
 

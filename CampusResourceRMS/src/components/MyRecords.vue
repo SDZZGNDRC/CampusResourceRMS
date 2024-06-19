@@ -4,7 +4,7 @@
     <v-row>
       <v-col cols="12">
         <!-- 展示结果 -->
-        <v-data-table :headers="headers" :items="results" items-per-page="7" items-per-page-text="每页显示">
+        <v-data-table :headers="headers" :items="results" items-per-page="10" items-per-page-text="每页显示">
           <template v-slot:item.status="{ value }">
             <v-chip :color="get_status_color(value)">
               {{ value }}

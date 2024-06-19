@@ -200,10 +200,16 @@ def get_all_locations():
 
 @app.route("/get-all-resource-types", methods=['GET'])
 def get_all_resource_types():
-    # 查询所有不重复的资源类型信息
+    # 查询所有的资源类型信息
     cursor = get_cursor()
-    cursor.execute("SELECT DISTINCT type_name FROM resourcetype")
-    resource_types = [row[0] for row in cursor.fetchall()]
+    cursor.execute("SELECT * FROM resourcetype")
+    resource_types = []
+    for row in cursor.fetchall():
+        resource_types.append({
+            'type_id': row[0],
+            'type_name': row[1],
+            'description': row[2],
+        })
     # 构建返回的 JSON 数据
     response = {
         "status": "success",
@@ -227,14 +233,14 @@ def search():
     name = request.args.get('name')
     location = request.args.get('location')
     capacity = request.args.get('capacity')
-    type_name = request.args.get('type')
+    type_id = request.args.get('type')
     start_date: str = request.args.get('start_date') # str; maybe null or empty; ISO 8601 格式
     end_date: str = request.args.get('end_date') # str; maybe null or empty; ISO 8601 格式
 
     cursor = get_cursor()
 
     # 构建查询语句
-    query = "SELECT r.resource_id, r.name, r.description, r.location, r.capacity, r.status, rt.type_name " \
+    query = "SELECT r.resource_id, r.name, r.description, r.location, r.capacity, r.status, rt.type_id " \
             "FROM resource r " \
             "JOIN resourcetype rt ON r.type_id = rt.type_id"
     
@@ -246,9 +252,9 @@ def search():
     if location:
         filters.append("r.location = %s")
         params.append(location)
-    if type_name:
-        filters.append("rt.type_name = %s")
-        params.append(type_name)
+    if type_id:
+        filters.append("rt.type_id = %s")
+        params.append(type_id)
 
     if capacity:
         filters.append("r.capacity >= %s")
@@ -289,9 +295,79 @@ def search():
             "location": resource[3],
             "capacity": resource[4],
             "status": resource[5],
-            "type_name": resource[6]
+            "type_id": resource[6]
         }
         response["resources"].append(resource_data)
+
+    return jsonify(response)
+
+@app.route("/add-resource", methods=['POST'])
+def add_resource():
+    name = request.json.get('name')
+    description = request.json.get('description')
+    location = request.json.get('location')
+    capacity = request.json.get('capacity')
+    type_id = request.json.get('type_id')
+
+    cursor = get_cursor()
+
+    # 查询当前最大的resource_id
+    cursor.execute("SELECT MAX(resource_id) FROM Resource")
+    result = cursor.fetchone()
+    max_resource_id = result[0] if result[0] else 0
+    next_resource_id = max_resource_id + 1
+
+    insert_query = "INSERT INTO Resource (resource_id, name, description, location, capacity, status, type_id) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+    cursor.execute(insert_query, (next_resource_id, name, description, location, capacity, 'available', type_id))
+
+    conn.commit()
+
+    response = {
+        "status": "success",
+        "message": "资源添加成功"
+    }
+
+    return jsonify(response)
+
+
+@app.route("/delete-resource", methods=['POST'])
+def delete_resource():
+    resource_id = request.json.get('resource_id')
+
+    cursor = get_cursor()
+
+    delete_query = "DELETE FROM Resource WHERE resource_id = %s"
+    cursor.execute(delete_query, (resource_id,))
+
+    conn.commit()
+
+    response = {
+        "status": "success",
+        "message": "资源删除成功"
+    }
+
+    return jsonify(response)
+
+@app.route("/update-resource", methods=['POST'])
+def update_resource():
+    resource_id = request.json.get('resource_id')
+    name = request.json.get('name')
+    description = request.json.get('description')
+    location = request.json.get('location')
+    capacity = request.json.get('capacity')
+    type_id = request.json.get('type_id')
+
+    cursor = get_cursor()
+
+    update_query = "UPDATE Resource SET name = %s, description = %s, location = %s, capacity = %s, type_id = %s WHERE resource_id = %s"
+    cursor.execute(update_query, (name, description, location, capacity, type_id, resource_id))
+
+    conn.commit()
+
+    response = {
+        "status": "success",
+        "message": "资源信息更新成功"
+    }
 
     return jsonify(response)
 
@@ -361,6 +437,10 @@ def reserve():
 def cancel_reserve():
     reservation_id = request.args.get('reservation_id')
     user_id = request.args.get('userID')
+    print(type(reservation_id))
+    print(reservation_id)
+    print(type(user_id))
+    print(user_id)
     if not (user_id and reservation_id):
         return jsonify({"status": "error", "message": "userID和reservationID均不能为空"})
 
@@ -372,7 +452,7 @@ def cancel_reserve():
 
     # 删除`reservation`表中的记录
     delete_reservation_query = "DELETE FROM Reservation WHERE reservation_id = %s"
-    cursor.execute(delete_reservation_query, (reservation_id))
+    cursor.execute(delete_reservation_query, (reservation_id,))
 
     # 提交事务
     conn.commit()

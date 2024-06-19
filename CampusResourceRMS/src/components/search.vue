@@ -17,6 +17,8 @@
           label="类型"
           v-model="type"
           clearable
+          item-title="type_name"
+          item-value="type_id"
         ></v-select>
       </v-col>
       <v-col cols="2" sm="2" md="2">
@@ -69,6 +71,9 @@
               {{ value }}
             </v-chip>
           </template>
+          <template v-slot:item.type_name="{ item }">
+            {{ typeID2typeName(item.type_id) }}
+          </template>
           <template v-slot:item.actions="{ item }">
             <v-btn class="me-2" color="green" size="small" @click="reserveItem(item)">预约</v-btn>
             <v-btn class="me-2" color="blue" size="small" @click="">查看</v-btn>
@@ -97,7 +102,7 @@
             </v-row>
             <v-row>
               <v-col cols="12">
-                <span>资源位置和类型: {{ results[reservedIndex].location }} - {{ results[reservedIndex].type_name }}</span>
+                <span>资源位置和类型: {{ results[reservedIndex].location }} - {{ typeID2typeName(results[reservedIndex].type_id) }}</span>
               </v-col>
             </v-row>
             <v-row>
@@ -209,6 +214,11 @@ export default {
       }
     };
 
+    const typeID2typeName = (typeID) => {
+      const t = types.value.find((type) => type.type_id === typeID);
+      return t ? t.type_name : '未知类型';
+    };
+
     watch([search, type, capacity, location, start_date, end_date], fetchResults, { immediate: true });
 
     const reserveItem = (item) => {
@@ -308,6 +318,7 @@ export default {
       type,
       capacity,
       location,
+      typeID2typeName,
       types,
       capacities,
       locations,
