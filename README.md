@@ -37,7 +37,7 @@ This system aims to provide a unified reservation management platform for variou
 2. startTime
 3. endTime
 4. resourceID (Foreign Key)
-5. status (取值: `审核中`; `审核通过`; `已完成`)
+5. status (取值: `审核中`; `审核通过`; `已完成`; `审核不通过`)
 6. description (nullable)
 7. public (boolean)
 

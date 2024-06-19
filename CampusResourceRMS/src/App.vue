@@ -1,17 +1,14 @@
 <!-- App.vue -->
 <template>
   <v-app>
-    <v-tabs centered bg-color="primary" v-if="isLogin">
-      <v-tab to="/test">Test</v-tab>
-      <v-tab to="/userdashboard">User Dashboard</v-tab>
-
+    <v-tabs align-tabs="center" centered bg-color="primary" v-if="isLogin">
       <v-tab to="/recent-activities">最近活动</v-tab>
       <v-tab to="/search">预约资源</v-tab>
       <v-tab to="/my-records">我的记录</v-tab>
       <v-tab to="/auto-schedule-course">自动排课</v-tab>
       <v-tab to="/user-manager">用户管理</v-tab>
       <v-tab to="/resource-manager">资源管理</v-tab>
-      <v-spacer></v-spacer>
+      <!-- <v-spacer></v-spacer> -->
     </v-tabs>
     <v-container v-if="!isLogin">
       <Login @update:isLogin="updateIsLogin" @update:user_id="updateUserID" />

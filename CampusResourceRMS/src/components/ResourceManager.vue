@@ -1,4 +1,5 @@
 <template>
+  <v-container>
     <v-data-table
       :headers="headers"
       :items="resources"
@@ -107,6 +108,7 @@
         </v-icon>
       </template>
     </v-data-table>
+  </v-container>
   </template>
 
 <script>

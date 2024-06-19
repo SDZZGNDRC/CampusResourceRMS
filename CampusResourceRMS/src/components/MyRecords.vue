@@ -64,6 +64,8 @@ export default {
           return 'green';
         case '已完成':
           return 'blue';
+        case '审核不通过':
+          return 'orange';
         default:
           return 'grey';
       }

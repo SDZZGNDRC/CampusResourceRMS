@@ -1,4 +1,5 @@
 <template>
+<v-container>
   <v-stepper v-model="step" :items="steps">
     <template v-slot:item.1>
       <ChooseCourses :selected.sync="selectedCourses"></ChooseCourses>
@@ -32,6 +33,7 @@
 
     </template>
   </v-stepper>
+</v-container>
 </template>
   
 <script>

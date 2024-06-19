@@ -1,4 +1,5 @@
 <template>
+  <v-container>
     <v-data-table
       :headers="headers"
       :items="users"
@@ -99,7 +100,8 @@
         </v-icon>
       </template>
     </v-data-table>
-  </template>
+  </v-container>
+</template>
 
 <script>
 export default {
