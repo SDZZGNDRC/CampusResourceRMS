@@ -1,6 +1,7 @@
 from typing import List
 from flask import Flask, jsonify, request
 from datetime import datetime, timedelta
+from dateutil.parser import parse
 import threading
 from flask_cors import CORS
 import mysql.connector
@@ -285,8 +286,8 @@ def search():
 
     # 如果`start_date`和`end_date`不为空，则添加时间范围条件: 在`reservation`表中查询`start_date`和`end_date`之间的记录并过滤掉
     if start_date and end_date:
-        start_datetime = datetime.fromisoformat(start_date)
-        end_datetime = datetime.fromisoformat(end_date)
+        start_datetime = parse(start_date)
+        end_datetime = parse(end_date)
         filters.append("""
             r.resource_id NOT IN (
                 SELECT resource_id
@@ -438,14 +439,14 @@ def idx2courseTime(start, idx):
     start_time_str = course_date.strftime("%Y-%m-%d") + "T" + course_time[0] + ":00"
     end_time_str = course_date.strftime("%Y-%m-%d") + "T" + course_time[1] + ":00"
     
-    return datetime.fromisoformat(start_time_str), datetime.fromisoformat(end_time_str)
+    return parse(start_time_str), parse(end_time_str)
 
 @app.route("/reserve-course", methods=['POST'])
 def reserve_course():
     data = request.json
     user_id = data.get('user_id')
-    start_time = datetime.fromisoformat(data.get('start_time'))  # convert string to datetime
-    end_time = datetime.fromisoformat(data.get('end_time'))      # convert string to datetime
+    start_time = parse(data.get('start_time'))  # convert string to datetime
+    end_time = parse(data.get('end_time'))      # convert string to datetime
     course_name = data.get('course_name')
     student_number = data.get('student_number')
     selected: List[bool] = data.get('selected')
@@ -516,8 +517,8 @@ def reserve():
     if not start_time or not end_time:
         return jsonify({"status": "error", "message": "start_time和end_time不能为空"})
     try:
-        start_time = datetime.fromisoformat(start_time)
-        end_time = datetime.fromisoformat(end_time)
+        start_time = parse(start_time)
+        end_time = parse(end_time)
     except ValueError:
         return jsonify({"status": "error", "message": "start_time和end_time格式不正确"})
 
@@ -651,7 +652,7 @@ def get_recent_reservations():
     global mutex
     start_time = request.args.get('start_time')
     if start_time:
-        start_datetime = datetime.fromisoformat(start_time)
+        start_datetime = parse(start_time)
     else:
         start_datetime = None
     mutex.acquire()
