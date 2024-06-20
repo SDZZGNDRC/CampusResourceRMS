@@ -76,7 +76,6 @@
           </template>
           <template v-slot:item.actions="{ item }">
             <v-btn class="me-2" color="green" size="small" @click="reserveItem(item)">预约</v-btn>
-            <v-btn class="me-2" color="blue" size="small" @click="">查看</v-btn>
           </template>
           <template v-slot:no-data>
             <v-card-text>
@@ -140,7 +139,7 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn color="blue-darken-1" @click="close"> 取消 </v-btn>
-          <v-btn color="blue-darken-1" @click="reserve"> 确认 </v-btn>
+          <v-btn color="blue-darken-1" @click="reserve" :disabled="isDescriptionEmpty"> 确认 </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -149,7 +148,7 @@
 </template>
 
 <script>
-import { ref, watch, onMounted, inject } from 'vue';
+import { ref, watch, onMounted, inject, computed } from 'vue';
 import axios from 'axios';
 
 export default {
@@ -279,6 +278,10 @@ export default {
 
       return `${hours}小时 ${minutes}分钟`;
     };
+    
+    const isDescriptionEmpty = computed(() => {
+      return reservedItem.value.description.trim() === '';
+    });
 
     const formatDateTime = (datetime) => {
       if (!datetime) {
@@ -328,6 +331,7 @@ export default {
       reserveItem,
       close,
       reserve,
+      isDescriptionEmpty,
       get_capacity_color,
       calculateDuration,
       formatDateTime,
