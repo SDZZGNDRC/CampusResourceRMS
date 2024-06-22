@@ -57,6 +57,23 @@
               </v-card-text>
             </template>
           </v-data-table>
+          <v-dialog v-model="confirmDialog" max-width="500px">
+            <v-card>
+              <v-card-title class="headline">确认审核通过</v-card-title>
+              <v-card-text>
+                该预约与以下预约存在冲突:
+                <ul>
+                  <li v-for="id in conflictingReservationIds" :key="id">预约编号: {{ id }}</li>
+                </ul>
+                是否确认审核通过? 如果通过该预约，和它冲突的预约将被拒绝。
+              </v-card-text>
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn color="blue darken-1" text @click="confirmDialog = false">取消</v-btn>
+                <v-btn color="blue darken-1" text @click="confirmUpdate">确认</v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
         </v-col>
       </v-row>
     </v-container>
@@ -71,13 +88,13 @@
       const userId = inject('user_id');
   
       const headers = [
+        { title: '预约ID', align: 'start', key: 'reservation_id' },
         { title: '资源名称', align: 'start', key: 'resource_name' },
         { title: '申请人', key: 'username' },
         { title: '开始时间', key: 'start_time' },
         { title: '结束时间', key: 'end_time' },
         { title: '持续时间', key: 'duration', sortable: false },
         { title: '描述', key: 'description', sortable: false },
-        { title: '公开预约', key: 'public', sortable: false },
         { title: '预约状态', key: 'status', sortable: false },
         { title: '操作', key: 'actions', sortable: false },
       ];
@@ -99,8 +116,55 @@
             return 'grey';
         }
       };
-  
+
+      const confirmDialog = ref(false);
+      const conflictingReservationIds = ref([]);
+      const selectedItem = ref(null);
+      const selectedStatus = ref('');
+
       const updateReservation = (item, s) => {
+        if (s === '审核通过') {
+          axios.get('http://127.0.0.1:5000/is-conflict', {
+            params: {
+              reservation_id: item.reservation_id
+            }
+          })
+          .then(response => {
+            if (response.data.status === 'no_conflict') {
+              performUpdate(item, s);
+            } else if (response.data.status === 'conflict') {
+              selectedItem.value = item;
+              selectedStatus.value = s;
+              conflictingReservationIds.value = response.data.conflicting_reservation_ids;
+              confirmDialog.value = true;
+            }
+          })
+          .catch(error => {
+            console.error('Error checking conflict:', error);
+          });
+        } else {
+          performUpdate(item, s);
+        }
+      };
+
+      const confirmUpdate = () => {
+        confirmDialog.value = false;
+
+        // 更新其余与当前预约发生冲突的预约状态为`审核不通过`
+        axios.post('http://127.0.0.1:5000/update-conflicting-reservations', {
+          reservation_ids: conflictingReservationIds.value,
+          status: '审核不通过',
+        })
+        .then(response => {
+          // 更新当前预约的状态为所选的状态
+          performUpdate(selectedItem.value, selectedStatus.value);
+        })
+        .catch(error => {
+          console.error('Error updating conflicting reservations:', error);
+        });
+      };
+
+      const performUpdate = (item, s) => {
         axios.post('http://127.0.0.1:5000/update-reservation', {
           reservation_id: item.reservation_id,
           status: s,
@@ -133,7 +197,8 @@
           console.error('Error canceling reservation:', error);
         });
       };
-  
+
+
   
       onMounted(() => {
         axios.get('http://127.0.0.1:5000/get-my-reservations', {
@@ -162,6 +227,11 @@
       });
   
       return {
+        confirmDialog,
+        conflictingReservationIds,
+        selectedItem,
+        selectedStatus,
+        confirmUpdate,
         headers,
         search,
         results,

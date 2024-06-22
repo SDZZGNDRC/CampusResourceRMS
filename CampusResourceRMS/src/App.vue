@@ -48,7 +48,6 @@ const updateRoleID = (value) => {
       break;
     case 1:
       tabsToShow.value = [
-        { to: '/test', label: '测试'},
         { to: '/recent-activities', label: '最近活动'},
         { to: '/search', label: '预约资源' },
         { to: '/my-records', label: '我的记录' },

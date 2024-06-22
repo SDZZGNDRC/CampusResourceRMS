@@ -95,7 +95,9 @@ export default {
             return {
               ...reservation,
               actions: '', // Add actions property to each reservation
-              duration: `${hours}小时${minutes}分钟`
+              duration: `${hours}小时${minutes}分钟`,
+              start_time: startTime.toLocaleString(),
+              end_time: endTime.toLocaleString(),
             };
           });
         })

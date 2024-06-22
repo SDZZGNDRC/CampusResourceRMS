@@ -292,18 +292,18 @@ def search():
         params.append(capacity)
 
     # 如果`start_date`和`end_date`不为空，则添加时间范围条件: 在`reservation`表中查询`start_date`和`end_date`之间的记录并过滤掉
-    if start_date and end_date:
-        start_datetime = parse(start_date)
-        end_datetime = parse(end_date)
-        filters.append("""
-            r.resource_id NOT IN (
-                SELECT resource_id
-                FROM reservation
-                WHERE (start_time <= %s AND end_time >= %s)
-                OR (start_time <= %s AND end_time >= %s)
-            )
-        """)
-        params.extend([end_datetime, start_datetime, start_datetime, end_datetime])
+    # if start_date and end_date:
+    #     start_datetime = parse(start_date)
+    #     end_datetime = parse(end_date)
+    #     filters.append("""
+    #         r.resource_id NOT IN (
+    #             SELECT resource_id
+    #             FROM reservation
+    #             WHERE (start_time <= %s AND end_time >= %s)
+    #             OR (start_time <= %s AND end_time >= %s)
+    #         )
+    #     """)
+    #     params.extend([end_datetime, start_datetime, start_datetime, end_datetime])
     
     if filters:
         query += " WHERE " + " AND ".join(filters)
@@ -675,6 +675,42 @@ def cancel_reserve():
     mutex.release()
     return jsonify(response)
 
+@app.route("/is-conflict", methods=['GET'])
+def is_conflict():
+    global mutex
+    reservation_id = request.args.get('reservation_id')
+    
+    if not reservation_id:
+        return jsonify({"status": "error", "message": "reservation_id不能为空"})
+    
+    mutex.acquire()
+    cursor = get_cursor()
+    
+    # 获取提供的预约信息
+    cursor.execute("SELECT resource_id, start_time, end_time FROM Reservation WHERE reservation_id = %s", (reservation_id,))
+    current_reservation = cursor.fetchone()
+    
+    if not current_reservation:
+        mutex.release()
+        return jsonify({"status": "error", "message": "未找到提供的预约记录"})
+    
+    resource_id = current_reservation[0]
+    start_time = current_reservation[1]
+    end_time = current_reservation[2]
+    
+    # 检查是否存在重叠的预约,排除当前预约自身
+    query = "SELECT reservation_id FROM Reservation WHERE resource_id = %s AND reservation_id != %s AND ((start_time <= %s AND end_time >= %s) OR (start_time <= %s AND end_time >= %s))"
+    cursor.execute(query, (resource_id, reservation_id, end_time, end_time, start_time, start_time))
+    conflicting_reservations = [row[0] for row in cursor.fetchall()]
+    
+    mutex.release()
+    
+    if conflicting_reservations:
+        return jsonify({"status": "conflict", "conflicting_reservation_ids": conflicting_reservations})
+    else:
+        return jsonify({"status": "no_conflict"})
+
+
 @app.route("/get-my-reservations", methods=['GET'])
 def get_my_reservations():
     global mutex
@@ -780,6 +816,32 @@ def get_recent_reservations():
         response["reservations"].append(reservation_data)
     mutex.release()
     return jsonify(response)
+
+@app.route("/update-conflicting-reservations", methods=['POST'])
+def update_conflicting_reservations():
+    global mutex
+    data = request.json
+    reservation_ids = data.get('reservation_ids')
+    status = data.get('status')
+    mutex.acquire()
+    cursor = get_cursor()
+
+    # 构建逗号分隔的预约ID字符串
+    reservation_ids_str = ','.join(map(str, reservation_ids))
+
+    # 更新冲突的预约记录的状态
+    update_query = f"UPDATE Reservation SET status = '{status}' WHERE reservation_id IN ({reservation_ids_str})"
+    cursor.execute(update_query)
+
+    conn.commit()
+
+    response = {
+        "status": "success",
+        "message": "冲突预约记录状态更新成功"
+    }
+    mutex.release()
+    return jsonify(response)
+
 
 @app.route("/update-reservation", methods=['POST'])
 def update_reservation():
