@@ -134,6 +134,13 @@
                 <v-checkbox v-model="reservedItem.public" label="公开预约"></v-checkbox>
               </v-col>
             </v-row>
+            <v-row>
+              <v-col cols="12">
+                <v-chip v-if="isConflict" color="red">
+                  当前预约与其他预约发生了冲突, 你的申请有可能被拒绝。
+                </v-chip>
+              </v-col>
+            </v-row>
           </v-container>
         </v-card-text>
         <v-card-actions>
@@ -180,7 +187,10 @@ export default {
       description: ref(''),
       public: ref(true),
     };
-    
+    const isConflict = ref(false);
+    const conflictingReservationIds = ref([]);
+
+
 
     const headers = [
       { title: '资源ID', align: 'start', key: 'resource_id' },
@@ -218,11 +228,33 @@ export default {
 
     watch([search, type, capacity, location, start_date, end_date], fetchResults, { immediate: true });
 
-    const reserveItem = (item) => {
+    const reserveItem = async (item) => {
       reservedIndex.value = results.value.indexOf(item);
-      reservedItem.value.resourceID = item.resource_id
-      reservedItem.value.start_time = new Date(start_date.value)
-      reservedItem.value.end_time = new Date(end_date.value)
+      reservedItem.value.resourceID = item.resource_id;
+      reservedItem.value.start_time = new Date(start_date.value);
+      reservedItem.value.end_time = new Date(end_date.value);
+
+      // 检查是否与其他预约冲突
+      try {
+        const response = await axios.get('http://127.0.0.1:5000/is-reserved', {
+          params: {
+            resource_id: reservedItem.value.resourceID,
+            start_time: reservedItem.value.start_time,
+            end_time: reservedItem.value.end_time,
+          },
+        });
+        console.log(response.data)
+        if (response.data.status === 'reserved') {
+          isConflict.value = true;
+          conflictingReservationIds.value = response.data.conflicting_reservation_ids;
+        } else {
+          isConflict.value = false;
+          conflictingReservationIds.value = [];
+        }
+      } catch (error) {
+        console.error('检查预约冲突失败', error);
+      }
+
       reserveDialog.value = true;
     };
 
@@ -230,6 +262,8 @@ export default {
       reserveDialog.value = false;
       reservedItem.value = { ...defaultItem };
       reservedIndex.value = -1;
+      isConflict.value = false;
+      conflictingReservationIds.value = [];
     };
 
     const reserve = async () => {
@@ -335,6 +369,8 @@ export default {
       get_capacity_color,
       calculateDuration,
       formatDateTime,
+      isConflict,
+      conflictingReservationIds,
     };
   }
 };

@@ -265,9 +265,7 @@ def search():
     location = request.args.get('location')
     capacity = request.args.get('capacity')
     type_id = request.args.get('type')
-    start_date: str = request.args.get('start_date') # str; maybe null or empty; ISO 8601 格式
-    end_date: str = request.args.get('end_date') # str; maybe null or empty; ISO 8601 格式
-
+    
     cursor = get_cursor()
 
     # 构建查询语句
@@ -291,20 +289,6 @@ def search():
         filters.append("r.capacity >= %s")
         params.append(capacity)
 
-    # 如果`start_date`和`end_date`不为空，则添加时间范围条件: 在`reservation`表中查询`start_date`和`end_date`之间的记录并过滤掉
-    # if start_date and end_date:
-    #     start_datetime = parse(start_date)
-    #     end_datetime = parse(end_date)
-    #     filters.append("""
-    #         r.resource_id NOT IN (
-    #             SELECT resource_id
-    #             FROM reservation
-    #             WHERE (start_time <= %s AND end_time >= %s)
-    #             OR (start_time <= %s AND end_time >= %s)
-    #         )
-    #     """)
-    #     params.extend([end_datetime, start_datetime, start_datetime, end_datetime])
-    
     if filters:
         query += " WHERE " + " AND ".join(filters)
 
@@ -480,106 +464,6 @@ def update_resource():
     mutex.release()
     return jsonify(response)
 
-def choose_resource(taken):
-    # NOTICE: 该函数暂未实现, 为提前演示, 随机返回一个资源ID.
-    cursor = get_cursor()
-    
-    # 执行SQL查询来随机选择一个资源ID
-    query = "SELECT resource_id FROM Resource ORDER BY RAND() LIMIT 1;"
-    cursor.execute(query)
-    
-    # 获取查询结果
-    result = cursor.fetchone()
-    
-    
-    if result:
-        r = result[0]  # 返回资源ID
-    else:
-        r = None  # 如果未找到资源ID，则返回None
-    return r
-
-def idx2courseTime(start, idx):
-    start_date = start
-    course_times = [
-        ["08:00", "09:45"],
-        ["10:05", "11:50"],
-        ["14:00", "15:45"],
-        ["16:05", "17:50"],
-        ["18:40", "20:25"],
-        ["20:45", "22:30"],
-    ]
-    
-    day_offset = idx // 6
-    course_time_idx = idx % 6
-
-    course_date = start_date + timedelta(days=day_offset)
-    course_time = course_times[course_time_idx]
-    
-    start_time_str = course_date.strftime("%Y-%m-%d") + "T" + course_time[0] + ":00"
-    end_time_str = course_date.strftime("%Y-%m-%d") + "T" + course_time[1] + ":00"
-    
-    return parse(start_time_str), parse(end_time_str)
-
-@app.route("/reserve-course", methods=['POST'])
-def reserve_course():
-    data = request.json
-    user_id = data.get('user_id')
-    start_time = parse(data.get('start_time'))  # convert string to datetime
-    end_time = parse(data.get('end_time'))      # convert string to datetime
-    course_name = data.get('course_name')
-    student_number = data.get('student_number')
-    selected: List[bool] = data.get('selected')
-    
-    # calculate the start and end dates of each class in the course
-    taken = []
-    for i, selected_day in enumerate(selected):
-        if selected_day:
-            taken.append(idx2courseTime(start_time, i))
-    
-    # find an available resource
-    resource_id = choose_resource(taken)
-    
-    cursor = get_cursor()
-
-    # 查询当前最大的reservation_id
-    cursor.execute("SELECT MAX(reservation_id) FROM Reservation")
-    max_reservation_id = cursor.fetchone()[0]
-
-    if max_reservation_id is None:
-        new_reservation_id = 1
-    else:
-        new_reservation_id = max_reservation_id + 1
-
-    # 查询当前最大的 record_id
-    cursor.execute("SELECT MAX(record_id) FROM UsageRecord")
-    max_record_id = cursor.fetchone()[0]
-
-    if max_record_id is None:
-        new_record_id = 1
-    else:
-        new_record_id = max_record_id + 1
-
-    # insert the reservation into the Reservation table
-    description = f"Course: {course_name}, Number of students: {student_number}"
-    cursor.execute(
-        "INSERT INTO Reservation (reservation_id, start_time, end_time, resource_id, status, description, public) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-        (new_reservation_id, start_time, end_time, resource_id, '审核中', description, True)
-    )
-    
-    # insert the usage records into the UsageRecord table
-    for start_date, end_date in taken:
-        print(start_date)
-        print(end_date)
-        cursor.execute(
-            "INSERT INTO UsageRecord (record_id, user_id, reservation_id, `primary`, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s)",
-            (new_record_id, user_id, new_reservation_id, True, start_date, end_date)
-        )
-        new_record_id += 1
-    
-    conn.commit()
-    
-    return jsonify({'message': 'Course reserved successfully'}), 201
-
 @app.route("/reserve", methods=['POST'])
 def reserve():
     # 获取POST请求的JSON数据
@@ -674,6 +558,33 @@ def cancel_reserve():
     }
     mutex.release()
     return jsonify(response)
+
+@app.route("/is-reserved", methods=['GET'])
+def is_reserved():
+    global mutex
+    resource_id = request.args.get('resource_id')
+    start_time = request.args.get('start_time')
+    end_time = request.args.get('end_time')
+    
+    if not (resource_id and start_time and end_time):
+        return jsonify({"status": "error", "message": "resource_id, start_time和end_time均不能为空"})
+    
+    start_time = parse(start_time)
+    end_time = parse(end_time)
+    
+    mutex.acquire()
+    cursor = get_cursor()
+    
+    query = "SELECT reservation_id FROM Reservation WHERE resource_id = %s AND ((start_time <= %s AND end_time >= %s) OR (start_time <= %s AND end_time >= %s))"
+    cursor.execute(query, (resource_id, end_time, end_time, start_time, start_time))
+    conflicting_reservations = [row[0] for row in cursor.fetchall()]
+    
+    mutex.release()
+    
+    if conflicting_reservations:
+        return jsonify({"status": "reserved", "conflicting_reservation_ids": conflicting_reservations})
+    else:
+        return jsonify({"status": "not_reserved"})
 
 @app.route("/is-conflict", methods=['GET'])
 def is_conflict():
