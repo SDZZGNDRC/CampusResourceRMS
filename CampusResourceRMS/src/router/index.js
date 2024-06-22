@@ -57,6 +57,10 @@ const router = createRouter({
       path: '/reservation-manager',
       component: () => import('@/components/ReservationManager.vue'),
     },
+    {
+      path: '/statistics', 
+      component: () => import('@/components/statistics.vue'),
+    },
   ]
 })
 

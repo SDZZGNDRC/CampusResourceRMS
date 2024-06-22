@@ -1,17 +1,24 @@
 from typing import List
 from flask import Flask, jsonify, request
-from datetime import datetime, timedelta
+from datetime import timedelta
+import json
 from dateutil.parser import parse
 import threading
 from flask_cors import CORS
 import mysql.connector
+
+config = {}
+with open('../config.json', 'r') as file:
+    config = json.load(file)
+
+
 app = Flask(__name__)
-token = '123456'
+token = config['token']
 conn = mysql.connector.connect(
-    host="localhost", 
-    user="datapool",
-    password="91OBBlRmTCSU5XcUs3VCjFgF7QrCibU1",
-    database="campusresourcerms",
+    host=config['db']['host'], 
+    user=config['db']['user'],
+    password=config['db']['password'],
+    database=config['db']['database'],
     autocommit=False
 )
 CORS(app)
@@ -324,6 +331,78 @@ def search():
         response["resources"].append(resource_data)
     mutex.release()
     return jsonify(response)
+
+@app.route("/statistics", methods=['GET'])
+def statistics():
+    global mutex
+    mutex.acquire()
+    name = request.args.get('name')
+    location = request.args.get('location')
+    capacity = request.args.get('capacity')
+    type_id = request.args.get('type')
+    start_date: str = request.args.get('start_date')  # str; maybe null or empty; ISO 8601 格式
+    end_date: str = request.args.get('end_date')  # str; maybe null or empty; ISO 8601 格式
+
+    cursor = get_cursor()
+
+    # 构建查询语句
+    query = "SELECT r.resource_id, r.name, r.description, r.location, r.capacity, r.status, rt.type_id, " \
+            "COALESCE(SUM(CASE WHEN res.status IN ('审核通过', '已完成') THEN 1 ELSE 0 END), 0) AS count, " \
+            "COALESCE(SUM(CASE WHEN res.status IN ('审核通过', '已完成') THEN TIMESTAMPDIFF(MINUTE, ur.start_time, ur.end_time) ELSE 0 END), 0) AS duration " \
+            "FROM resource r " \
+            "JOIN resourcetype rt ON r.type_id = rt.type_id " \
+            "LEFT JOIN reservation res ON r.resource_id = res.resource_id " \
+            "LEFT JOIN usagerecord ur ON res.reservation_id = ur.reservation_id"
+
+    filters = []
+    params = []
+    if name:
+        filters.append("r.name LIKE %s")
+        params.append('%' + name + '%')
+    if location:
+        filters.append("r.location = %s")
+        params.append(location)
+    if type_id:
+        filters.append("rt.type_id = %s")
+        params.append(type_id)
+    if capacity:
+        filters.append("r.capacity >= %s")
+        params.append(capacity)
+    if start_date and end_date:
+        filters.append("res.start_time >= %s AND res.end_time <= %s")
+        params.extend([start_date, end_date])
+
+    if filters:
+        query += " WHERE " + " AND ".join(filters)
+
+    query += " GROUP BY r.resource_id"
+
+    # 执行查询
+    cursor.execute(query, params)
+    resources = cursor.fetchall()
+
+    # 构建返回的 JSON 数据
+    response = {
+        "status": "success",
+        "resources": []
+    }
+
+    for resource in resources:
+        resource_data = {
+            "resource_id": resource[0],
+            "name": resource[1],
+            "description": resource[2],
+            "location": resource[3],
+            "capacity": resource[4],
+            "status": resource[5],
+            "type_id": resource[6],
+            "count": resource[7],  # 预约次数
+            "duration": resource[8]  # 总时长
+        }
+        response["resources"].append(resource_data)
+    mutex.release()
+    return jsonify(response)
+
 
 @app.route("/add-resource", methods=['POST'])
 def add_resource():

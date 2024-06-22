@@ -43,10 +43,12 @@ const updateRoleID = (value) => {
         { to: '/user-manager', label: '用户管理' },
         { to: '/resource-manager', label: '资源管理' },
         { to: '/reservation-manager', label: '预约管理' },
+        { to: 'statistics', label: '使用统计'},
       ]
       break;
     case 1:
       tabsToShow.value = [
+        { to: '/test', label: '测试'},
         { to: '/recent-activities', label: '最近活动'},
         { to: '/search', label: '预约资源' },
         { to: '/my-records', label: '我的记录' },
@@ -57,7 +59,6 @@ const updateRoleID = (value) => {
         { to: '/recent-activities', label: '最近活动'},
         { to: '/search', label: '预约资源' },
         { to: '/my-records', label: '我的记录' },
-        { to: '/auto-schedule-course', label: '自动排课' },
       ]
       break;
     default:
