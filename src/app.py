@@ -619,7 +619,7 @@ def is_conflict():
     if conflicting_reservations:
         return jsonify({"status": "conflict", "conflicting_reservation_ids": conflicting_reservations})
     else:
-        return jsonify({"status": "no_conflict"})
+        return jsonify({"status": "no_conflict", "conflicting_reservation_ids": []})
 
 
 @app.route("/get-my-reservations", methods=['GET'])
@@ -659,6 +659,12 @@ def get_my_reservations():
         start_time_str = reservation[1].strftime('%Y-%m-%d %H:%M')  # 将开始时间转化为`YY-MM-DD-HH:mm`的格式
         end_time_str = reservation[2].strftime('%Y-%m-%d %H:%M')  # 将结束时间转化为`YY-MM-DD-HH:mm`的格式
 
+        # 查询与当前预约冲突的预约ID
+        query_conflicts = "SELECT reservation_id FROM Reservation WHERE resource_id = %s AND reservation_id != %s AND ((start_time <= %s AND end_time >= %s) OR (start_time <= %s AND end_time >= %s))"
+        cursor.execute(query_conflicts, (reservation[3], reservation[0], reservation[2], reservation[2], reservation[1], reservation[1]))
+        conflict_ids = [row[0] for row in cursor.fetchall()]  # 存储冲突的预约ID列表
+
+        # 新增一个`conflict_ids`字段，存储和当前预约冲突的所有预约ID
         reservation_data = {
             "reservation_id": reservation[0],
             "start_time": start_time_str,
@@ -667,7 +673,8 @@ def get_my_reservations():
             "username": reservation[7],
             "status": reservation[4],
             "description": reservation[5],
-            "public": '是' if reservation[6] else '否'
+            "public": '是' if reservation[6] else '否',
+            "conflict_ids": conflict_ids  # 冲突的预约ID列表
         }
         response["reservations"].append(reservation_data)
     mutex.release()

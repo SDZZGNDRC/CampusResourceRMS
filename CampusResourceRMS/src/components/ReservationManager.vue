@@ -31,6 +31,21 @@
             <template v-slot:item.duration="{ value }">
               {{ value }}
             </template>
+            <template v-slot:item.conflict="{ item }">
+              <template v-if="item.status !== '审核中'">
+                <v-chip color="grey">无冲突</v-chip>
+              </template>
+              <template v-else>
+                <template v-if="item.conflict_ids && item.conflict_ids.length > 0">
+                  <template v-for="id in item.conflict_ids">
+                    <v-chip color="red">{{ id }}</v-chip>
+                  </template>
+                </template>
+                <template v-else>
+                  <v-chip color="grey">无冲突</v-chip>
+                </template>
+              </template>
+            </template>
             <template v-slot:item.actions="{ item }">
               <v-btn 
                 :disabled="item.status !== '审核中'" 
@@ -92,10 +107,11 @@
         { title: '资源名称', align: 'start', key: 'resource_name' },
         { title: '申请人', key: 'username' },
         { title: '开始时间', key: 'start_time' },
-        { title: '结束时间', key: 'end_time' },
+        // { title: '结束时间', key: 'end_time' },
         { title: '持续时间', key: 'duration', sortable: false },
         { title: '描述', key: 'description', sortable: false },
         { title: '预约状态', key: 'status', sortable: false },
+        { title: '冲突的预约ID', key: 'conflict', sortable: false },
         { title: '操作', key: 'actions', sortable: false },
       ];
 
@@ -121,6 +137,7 @@
       const conflictingReservationIds = ref([]);
       const selectedItem = ref(null);
       const selectedStatus = ref('');
+      const conflictingReservationIdsMap = ref({});
 
       const updateReservation = (item, s) => {
         if (s === '审核通过') {
@@ -198,8 +215,6 @@
         });
       };
 
-
-  
       onMounted(() => {
         axios.get('http://127.0.0.1:5000/get-my-reservations', {
           params: {
@@ -242,4 +257,9 @@
     }
   };
   </script>
-  
+
+  <style>
+  .conflict-text {
+    color: red;
+  }
+  </style>
